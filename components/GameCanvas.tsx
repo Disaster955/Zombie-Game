@@ -1547,83 +1547,118 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
       {isMobile && isLandscape && gameStatus === GameStatus.PLAYING && (
           <>
             
-            {/* Top Right Utils - Keeping these at top, but fixed */}
-            <div className="fixed top-4 right-4 flex gap-4 z-50 pointer-events-auto">
+            {/* Top Right Utils */}
+            <div 
+                className="flex pointer-events-auto"
+                style={{ position: 'fixed', top: '20px', right: '20px', gap: '20px', zIndex: 50 }}
+            >
                 <button 
-                  className="w-[48px] h-[48px] bg-gray-700/80 active:bg-gray-600 backdrop-blur-md rounded-full border border-gray-400 flex items-center justify-center text-white text-xs font-bold shadow-lg"
+                  className="bg-gray-700/80 active:bg-gray-600 backdrop-blur-md rounded-full border border-gray-400 flex items-center justify-center text-white text-xs font-bold shadow-lg"
                   onTouchStart={handleTouch('r', true)} onTouchEnd={handleTouch('r', false)}
-                  style={{ touchAction: 'none' }}
+                  style={{ width: '48px', height: '48px', touchAction: 'none' }}
                 >
                     R
                 </button>
                 <button 
-                  className="w-[48px] h-[48px] bg-gray-700/80 active:bg-gray-600 backdrop-blur-md rounded-full border border-gray-400 flex items-center justify-center text-white text-xs font-bold shadow-lg"
+                  className="bg-gray-700/80 active:bg-gray-600 backdrop-blur-md rounded-full border border-gray-400 flex items-center justify-center text-white text-xs font-bold shadow-lg"
                   onTouchStart={handleTouch('c', true)} onTouchEnd={handleTouch('c', false)}
-                  style={{ touchAction: 'none' }}
+                  style={{ width: '48px', height: '48px', touchAction: 'none' }}
                 >
                     SWAP
                 </button>
                 <button 
-                  className="w-[48px] h-[48px] bg-red-900/80 active:bg-red-800 backdrop-blur-md rounded-full border border-red-400 flex items-center justify-center text-white text-lg font-bold shadow-lg"
+                  className="bg-red-900/80 active:bg-red-800 backdrop-blur-md rounded-full border border-red-400 flex items-center justify-center text-white text-lg font-bold shadow-lg"
                   onTouchStart={handleTouch('v', true)} onTouchEnd={handleTouch('v', false)}
-                  style={{ touchAction: 'none' }}
+                  style={{ width: '48px', height: '48px', touchAction: 'none' }}
                 >
                     +
                 </button>
                 <button 
-                   className="w-[48px] h-[48px] bg-yellow-600/80 active:bg-yellow-500 backdrop-blur-md rounded-full border border-yellow-400 flex items-center justify-center text-white font-bold text-xs shadow-lg"
+                   className="bg-yellow-600/80 active:bg-yellow-500 backdrop-blur-md rounded-full border border-yellow-400 flex items-center justify-center text-white font-bold text-xs shadow-lg"
                    onTouchStart={handlePause}
-                   style={{ touchAction: 'none' }}
+                   style={{ width: '48px', height: '48px', touchAction: 'none' }}
                 >
                     ||
                 </button>
             </div>
 
-            {/* Joystick - Fixed Bottom Left (20px margin, fixed size) */}
+            {/* Joystick */}
             <div 
                 ref={joystickBaseRef}
-                className="fixed bottom-[20px] left-[20px] w-[120px] h-[120px] bg-gray-800/60 rounded-full border-2 border-gray-400 flex items-center justify-center backdrop-blur-md z-50 pointer-events-auto shadow-2xl"
+                className="bg-gray-800/60 rounded-full border-2 border-gray-400 flex items-center justify-center backdrop-blur-md pointer-events-auto shadow-2xl"
                 onTouchStart={handleJoystickTouch}
                 onTouchMove={handleJoystickTouch}
                 onTouchEnd={handleJoystickEnd}
                 onTouchCancel={handleJoystickEnd}
-                style={{ touchAction: 'none' }}
+                style={{ 
+                    position: 'fixed', 
+                    bottom: '30px', 
+                    left: '30px', 
+                    width: '140px', 
+                    height: '140px', 
+                    zIndex: 50,
+                    touchAction: 'none' 
+                }}
             >
                 {/* Visual indicator of center */}
                 <div className="absolute w-2 h-2 bg-gray-400/50 rounded-full"></div>
                 
                 <div 
                     ref={joystickKnobRef}
-                    className="w-12 h-12 bg-white rounded-full shadow-xl pointer-events-none border-2 border-gray-300"
+                    className="w-14 h-14 bg-white rounded-full shadow-xl pointer-events-none border-2 border-gray-300"
                     style={{ transform: 'translate(0px, 0px)', transition: 'transform 0.05s linear' }}
                 ></div>
             </div>
 
-            {/* Action Buttons - Fixed 80px sizes, Bottom 20px anchor */}
+            {/* Action Buttons */}
             
-            {/* Fire - Left of Jump */}
+            {/* FIRE */}
             <button 
-                className="fixed bottom-[20px] right-[120px] w-[80px] h-[80px] bg-red-600/80 rounded-full border-2 border-white active:bg-red-500 active:scale-95 transition-transform text-white font-bold text-xs flex items-center justify-center shadow-xl backdrop-blur-sm z-50 pointer-events-auto"
+                className="bg-red-600/80 rounded-full border-2 border-white active:bg-red-500 active:scale-95 transition-transform text-white font-bold text-xs flex items-center justify-center shadow-xl backdrop-blur-sm pointer-events-auto"
                 onTouchStart={handleTouch('x', true)} onTouchEnd={handleTouch('x', false)}
-                style={{ touchAction: 'none' }}
+                style={{ 
+                    position: 'fixed', 
+                    bottom: '20px', 
+                    right: '120px', 
+                    width: '80px', 
+                    height: '80px', 
+                    zIndex: 50,
+                    touchAction: 'none' 
+                }}
             >
                 FIRE
             </button>
             
-            {/* Jump - Bottom Right */}
+            {/* JUMP */}
             <button 
-                className="fixed bottom-[20px] right-[20px] w-[80px] h-[80px] bg-blue-600/80 rounded-full border-2 border-white active:bg-blue-500 active:scale-95 transition-transform text-white font-bold text-lg flex items-center justify-center shadow-xl backdrop-blur-sm z-50 pointer-events-auto"
+                className="bg-blue-600/80 rounded-full border-2 border-white active:bg-blue-500 active:scale-95 transition-transform text-white font-bold text-lg flex items-center justify-center shadow-xl backdrop-blur-sm pointer-events-auto"
                 onTouchStart={handleTouch('z', true)} onTouchEnd={handleTouch('z', false)}
-                style={{ touchAction: 'none' }}
+                style={{ 
+                    position: 'fixed', 
+                    bottom: '20px', 
+                    right: '20px', 
+                    width: '80px', 
+                    height: '80px', 
+                    zIndex: 50,
+                    touchAction: 'none' 
+                }}
             >
                 JUMP
             </button>
 
-            {/* Dash - Above Jump (Stacked) */}
+            {/* DASH */}
             <button 
-                className="fixed bottom-[120px] right-[20px] w-[80px] h-[80px] bg-cyan-600/80 rounded-full border-2 border-white active:bg-cyan-500 active:scale-95 transition-transform text-white font-bold text-xs flex items-center justify-center shadow-xl backdrop-blur-sm z-50 pointer-events-auto"
+                className="bg-cyan-600/80 rounded-full border-2 border-white active:bg-cyan-500 active:scale-95 transition-transform text-white font-bold text-xs flex items-center justify-center shadow-xl backdrop-blur-sm pointer-events-auto"
                 onTouchStart={handleTouch(' ', true)} onTouchEnd={handleTouch(' ', false)}
-                style={{ touchAction: 'none' }}
+                style={{ 
+                    position: 'fixed', 
+                    bottom: '120px', 
+                    right: '20px', 
+                    width: '80px', 
+                    height: '80px', 
+                    zIndex: 50,
+                    touchAction: 'none' 
+                }}
             >
                 DASH
             </button>
