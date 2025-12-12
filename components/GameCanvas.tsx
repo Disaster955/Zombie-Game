@@ -62,8 +62,9 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
   const FIXED_TIME_STEP = 1000 / 60; 
   
   // Viewport Logic
-  const TARGET_HEIGHT = 720; // Increased from 640 to zoom out camera slightly
+  const TARGET_HEIGHT = 720; 
   const scaleRef = useRef<number>(1);
+  const dprRef = useRef<number>(1); // Store Device Pixel Ratio
   
   // Input State
   const keys = useRef<{ [key: string]: boolean }>({});
@@ -83,7 +84,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
           e.preventDefault();
       };
       
-      // 'passive: false' is required to allow preventDefault() to work
       document.body.addEventListener('touchmove', preventDefault, { passive: false });
       
       return () => {
@@ -94,31 +94,36 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
   // Detect Mobile & Orientation & Resize
   useEffect(() => {
     const handleResize = () => {
+        const dpr = window.devicePixelRatio || 1;
+        dprRef.current = dpr;
+        
         const w = window.innerWidth;
         const h = window.innerHeight;
         
         if (canvasRef.current) {
-            canvasRef.current.width = w;
-            canvasRef.current.height = h;
+            // Set physical resolution (sharpness)
+            canvasRef.current.width = w * dpr;
+            canvasRef.current.height = h * dpr;
+            
+            // Set logical CSS size
+            canvasRef.current.style.width = `${w}px`;
+            canvasRef.current.style.height = `${h}px`;
         }
         
-        // Calculate scale to fit the target height
-        // This ensures the floor (600px) is always visible even on short screens (e.g. 360px high)
-        scaleRef.current = h / TARGET_HEIGHT;
+        // Calculate scale to fit the target height based on PHYSICAL pixels
+        // This ensures the game world is drawn at the correct size relative to the screen, but using high-res pixels
+        scaleRef.current = (h * dpr) / TARGET_HEIGHT;
 
         setIsLandscape(w > h);
         setIsMobile(('ontouchstart' in window) || (navigator.maxTouchPoints > 0));
     };
 
-    // Add listener
     window.addEventListener('resize', handleResize);
     window.addEventListener('orientationchange', () => {
-        // Delay slightly to allow browser to finish layout change
         setTimeout(handleResize, 100);
         setTimeout(handleResize, 500);
     });
     
-    // Initial call
     handleResize();
     
     return () => window.removeEventListener('resize', handleResize);
@@ -310,7 +315,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
       const settings = DIFFICULTY_SETTINGS[state.current.difficulty];
 
       // Calculate scaled screen width for spawn logic
-      const logicalWidth = screenWidth / scaleRef.current;
+      const logicalWidth = screenWidth / (scaleRef.current / dprRef.current); // Approx logic width
       
       const spawnPoints = [
           camera.x - 50,
@@ -630,7 +635,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
             player.vy = 0;
             player.invincibleTimer = INVINCIBLE_FRAMES;
             soundManager.playDamage();
-            spawnParticles(canvasRef.current?.width ? canvasRef.current.width/2 + state.current.camera.x : player.x, player.y, '#ff0000', 50);
+            spawnParticles(canvasRef.current?.width ? canvasRef.current.width/dprRef.current/2 + state.current.camera.x : player.x, player.y, '#ff0000', 50);
         } else {
             player.health = 0;
             soundManager.playDamage();
@@ -929,9 +934,9 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
     if (canvas) {
         // Updated Camera Logic for Scaled Context
         // We work with "logical coordinates" inside the state, but we need to center based on logical viewport
+        // Adjust for DPR
         const currentScale = scaleRef.current;
         const logicalWidth = canvas.width / currentScale;
-        // const logicalHeight = canvas.height / currentScale; 
 
         const targetCamX = player.x - logicalWidth / 3; 
         state.current.camera.x += (targetCamX - state.current.camera.x) * 0.1;
@@ -1097,6 +1102,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
 
     const { player, platforms, zombies, particles, projectiles, collectibles, camera, hordeWarningTimer } = state.current;
     const currentScale = scaleRef.current;
+    const dpr = dprRef.current;
 
     // --- FIX: DRAW BACKGROUND IN PHYSICAL PIXELS FIRST ---
     // Reset transform to identity to draw the global background color over the entire canvas
@@ -1109,6 +1115,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
     // --- APPLY DYNAMIC SCALING ---
     // This zooms the game out if the screen is too short (mobile landscape)
     // so we can see the full vertical height of the level.
+    // currentScale accounts for DPR now.
     ctx.scale(currentScale, currentScale);
     
     ctx.translate(-Math.floor(camera.x), -Math.floor(camera.y));
@@ -1220,10 +1227,14 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
     
     if (hordeWarningTimer > 0) {
         ctx.save();
+        // Scale for overlay (since it wasn't affected by world scale)
+        ctx.scale(dpr, dpr);
+        
         ctx.fillStyle = 'rgba(220, 38, 38, 0.2)'; 
-        // We use logical dimensions here if we are inside scaled context, or full canvas if not
-        // But since restore() was called, we are back to screen pixels.
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // We use logical dimensions here because we scaled the context
+        const logicalW = canvas.width / dpr;
+        const logicalH = canvas.height / dpr;
+        ctx.fillRect(0, 0, logicalW, logicalH);
         
         if (Math.floor(Date.now() / 200) % 2 === 0) {
             ctx.fillStyle = '#ef4444'; 
@@ -1232,10 +1243,10 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
             ctx.font = '900 48px sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText('¡SE ACERCAN LOS ZOMBIES!', canvas.width / 2, canvas.height / 3);
+            ctx.fillText('¡SE ACERCAN LOS ZOMBIES!', logicalW / 2, logicalH / 3);
             ctx.strokeStyle = 'white';
             ctx.lineWidth = 2;
-            ctx.strokeText('¡SE ACERCAN LOS ZOMBIES!', canvas.width / 2, canvas.height / 3);
+            ctx.strokeText('¡SE ACERCAN LOS ZOMBIES!', logicalW / 2, logicalH / 3);
         }
         ctx.restore();
     }
@@ -1250,14 +1261,20 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
       if (!ctx) return;
       
       const { player, score } = state.current;
+      const dpr = dprRef.current;
       
       ctx.save();
       
+      // Scale HUD context to match logical pixels (fixes tiny text on retina)
+      ctx.scale(dpr, dpr);
+      
       // Auto-scale HUD for small screens
-      // Check for either small height OR small width (typical phones)
-      if (canvas.height < 500 || canvas.width < 600) {
+      const logicalHeight = canvas.height / dpr;
+      const logicalWidth = canvas.width / dpr;
+      
+      if (logicalHeight < 500 || logicalWidth < 600) {
           ctx.scale(0.5, 0.5); // Shrink HUD significantly
-      } else if (canvas.height < 600) {
+      } else if (logicalHeight < 600) {
           ctx.scale(0.7, 0.7);
       }
 
