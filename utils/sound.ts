@@ -161,6 +161,58 @@ class SoundManager {
     osc.stop(this.ctx.currentTime + 0.1);
   }
 
+  playLand() {
+    if (!this.ctx) return;
+    // Thud
+    this.createNoise(0.05, 0.3);
+    this.createOscillator('square', 60, 0.1, 0.2);
+  }
+
+  playSlide() {
+    if (!this.ctx) return;
+    // Scrape sound
+    this.createNoise(0.4, 0.2);
+  }
+
+  playStep() {
+    if (!this.ctx) return;
+    // Subtle tap
+    this.createNoise(0.02, 0.05);
+  }
+
+  playExplosion() {
+    if (!this.ctx) return;
+    // Big boom
+    const now = this.ctx.currentTime;
+    
+    // Noise
+    const bufferSize = this.ctx.sampleRate * 1.0;
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+    }
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buffer;
+    
+    const noiseGain = this.ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.5, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 1.0);
+    
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 1000;
+    filter.frequency.exponentialRampToValueAtTime(100, now + 0.5);
+
+    noise.connect(filter);
+    filter.connect(noiseGain);
+    noiseGain.connect(this.masterGain!);
+    noise.start();
+
+    // Sub bass
+    this.createOscillator('sawtooth', 50, 0.8, 0.3);
+  }
+
   playShoot(weapon: WeaponType) {
     if (!this.ctx) return;
 

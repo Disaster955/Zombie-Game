@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#111827" />
     <title>Zombie Run: Dead City</title>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -13,7 +13,7 @@
         margin: 0;
         padding: 0;
         overflow: hidden;
-        background-color: #111827; /* gray-900 - Matches game background */
+        background-color: #111827; /* gray-900 */
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         touch-action: none;
         -webkit-user-select: none;
@@ -85,6 +85,17 @@
     </div>
 
     <script type="module" src="/index.tsx"></script>
+    <script>
+      // Prevent pinch to zoom on iOS
+      document.addEventListener('gesturestart', function (e) {
+          e.preventDefault();
+      });
+      
+      // Prevent double-tap to zoom
+      document.addEventListener('dblclick', function(event) {
+          event.preventDefault();
+      }, { passive: false });
+    </script>
     <style>
         @keyframes bounce {
             0%, 100% { transform: translateY(-10%); }

@@ -401,7 +401,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
         player.slideTimer = SLIDE_DURATION;
         player.vx = player.facingRight ? SLIDE_SPEED : -SLIDE_SPEED;
         spawnParticles(player.x + player.w/2, player.y + player.h, '#ffffff', 5);
-        soundManager.playJump(); 
+        soundManager.playSlide(); 
     }
 
     if (player.isSliding) {
@@ -608,6 +608,9 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
         }
 
         if (player.vy > 0) {
+          if (player.vy > 5) {
+             soundManager.playLand();
+          }
           player.y = plat.y - player.h;
           player.isGrounded = true;
           player.vy = 0;
@@ -831,6 +834,10 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
              zombie.y = plat.y - zombie.h;
              zombie.vy = 0;
              zombieGrounded = true;
+             // Footsteps logic
+             if (Math.abs(zombie.vx) > 0.1 && Math.abs(player.x - zombie.x) < 500) {
+                 if (Math.random() < 0.05) soundManager.playStep();
+             }
           } else if (zombie.vx !== 0) {
              zombie.x -= zombie.vx; 
              zombie.vx = 0;
@@ -859,8 +866,13 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
               if (zombie.health <= 0) {
                   zombie.isDead = true;
                   let points = 100;
-                  if (zombie.type === ZombieType.TANK) points = 400; 
+                  
+                  if (zombie.type === ZombieType.TANK) {
+                      points = 400; 
+                      soundManager.playExplosion(); // Tank death sound
+                  }
                   if (zombie.type === ZombieType.SCREAMER) points = 200;
+                  
                   state.current.score += points * settings.scoreMultiplier;
                   spawnParticles(zombie.x + zombie.w/2, zombie.y + zombie.h/2, '#ef4444', 15);
                   // Score is updated in state ref, but not synced to React to save performance
@@ -1538,28 +1550,28 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
             {/* Top Right Utils - Fixed */}
             <div className="fixed top-4 right-4 flex gap-4 z-50 pointer-events-auto">
                 <button 
-                  className="w-12 h-12 bg-gray-700/80 active:bg-gray-600 backdrop-blur-md rounded-full border border-gray-400 flex items-center justify-center text-white text-xs font-bold shadow-lg"
+                  className="w-[48px] h-[48px] bg-gray-700/80 active:bg-gray-600 backdrop-blur-md rounded-full border border-gray-400 flex items-center justify-center text-white text-xs font-bold shadow-lg"
                   onTouchStart={handleTouch('r', true)} onTouchEnd={handleTouch('r', false)}
                   style={{ touchAction: 'none' }}
                 >
                     R
                 </button>
                 <button 
-                  className="w-12 h-12 bg-gray-700/80 active:bg-gray-600 backdrop-blur-md rounded-full border border-gray-400 flex items-center justify-center text-white text-xs font-bold shadow-lg"
+                  className="w-[48px] h-[48px] bg-gray-700/80 active:bg-gray-600 backdrop-blur-md rounded-full border border-gray-400 flex items-center justify-center text-white text-xs font-bold shadow-lg"
                   onTouchStart={handleTouch('c', true)} onTouchEnd={handleTouch('c', false)}
                   style={{ touchAction: 'none' }}
                 >
                     SWAP
                 </button>
                 <button 
-                  className="w-12 h-12 bg-red-900/80 active:bg-red-800 backdrop-blur-md rounded-full border border-red-400 flex items-center justify-center text-white text-lg font-bold shadow-lg"
+                  className="w-[48px] h-[48px] bg-red-900/80 active:bg-red-800 backdrop-blur-md rounded-full border border-red-400 flex items-center justify-center text-white text-lg font-bold shadow-lg"
                   onTouchStart={handleTouch('v', true)} onTouchEnd={handleTouch('v', false)}
                   style={{ touchAction: 'none' }}
                 >
                     +
                 </button>
                 <button 
-                   className="w-12 h-12 bg-yellow-600/80 active:bg-yellow-500 backdrop-blur-md rounded-full border border-yellow-400 flex items-center justify-center text-white font-bold text-xs shadow-lg"
+                   className="w-[48px] h-[48px] bg-yellow-600/80 active:bg-yellow-500 backdrop-blur-md rounded-full border border-yellow-400 flex items-center justify-center text-white font-bold text-xs shadow-lg"
                    onTouchStart={handlePause}
                    style={{ touchAction: 'none' }}
                 >
@@ -1570,7 +1582,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
             {/* Joystick - Fixed Bottom Left */}
             <div 
                 ref={joystickBaseRef}
-                className="fixed bottom-[30px] left-[30px] w-[140px] h-[140px] bg-gray-800/60 rounded-full border-2 border-gray-400 flex items-center justify-center backdrop-blur-md z-50 pointer-events-auto shadow-2xl"
+                className="fixed bottom-[40px] left-[40px] w-[140px] h-[140px] bg-gray-800/60 rounded-full border-2 border-gray-400 flex items-center justify-center backdrop-blur-md z-50 pointer-events-auto shadow-2xl"
                 onTouchStart={handleJoystickTouch}
                 onTouchMove={handleJoystickTouch}
                 onTouchEnd={handleJoystickEnd}
@@ -1591,7 +1603,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
             
             {/* Fire - Left of Jump */}
             <button 
-                className="fixed bottom-[30px] right-[150px] w-[80px] h-[80px] bg-red-600/80 rounded-full border-2 border-white active:bg-red-500 active:scale-95 transition-transform text-white font-bold text-xs flex items-center justify-center shadow-xl backdrop-blur-sm z-50 pointer-events-auto"
+                className="fixed bottom-[40px] right-[160px] w-[80px] h-[80px] bg-red-600/80 rounded-full border-2 border-white active:bg-red-500 active:scale-95 transition-transform text-white font-bold text-xs flex items-center justify-center shadow-xl backdrop-blur-sm z-50 pointer-events-auto"
                 onTouchStart={handleTouch('x', true)} onTouchEnd={handleTouch('x', false)}
                 style={{ touchAction: 'none' }}
             >
@@ -1600,7 +1612,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
             
             {/* Jump - Main Bottom Right */}
             <button 
-                className="fixed bottom-[20px] right-[20px] w-[110px] h-[110px] bg-blue-600/80 rounded-full border-2 border-white active:bg-blue-500 active:scale-95 transition-transform text-white font-bold text-lg flex items-center justify-center shadow-xl backdrop-blur-sm z-50 pointer-events-auto"
+                className="fixed bottom-[30px] right-[30px] w-[110px] h-[110px] bg-blue-600/80 rounded-full border-2 border-white active:bg-blue-500 active:scale-95 transition-transform text-white font-bold text-lg flex items-center justify-center shadow-xl backdrop-blur-sm z-50 pointer-events-auto"
                 onTouchStart={handleTouch('z', true)} onTouchEnd={handleTouch('z', false)}
                 style={{ touchAction: 'none' }}
             >
@@ -1609,7 +1621,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
 
             {/* Dash - Above Jump */}
             <button 
-                className="fixed bottom-[150px] right-[30px] w-[80px] h-[80px] bg-cyan-600/80 rounded-full border-2 border-white active:bg-cyan-500 active:scale-95 transition-transform text-white font-bold text-xs flex items-center justify-center shadow-xl backdrop-blur-sm z-50 pointer-events-auto"
+                className="fixed bottom-[150px] right-[40px] w-[80px] h-[80px] bg-cyan-600/80 rounded-full border-2 border-white active:bg-cyan-500 active:scale-95 transition-transform text-white font-bold text-xs flex items-center justify-center shadow-xl backdrop-blur-sm z-50 pointer-events-auto"
                 onTouchStart={handleTouch(' ', true)} onTouchEnd={handleTouch(' ', false)}
                 style={{ touchAction: 'none' }}
             >
