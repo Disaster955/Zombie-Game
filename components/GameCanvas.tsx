@@ -914,7 +914,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
         // We work with "logical coordinates" inside the state, but we need to center based on logical viewport
         const currentScale = scaleRef.current;
         const logicalWidth = canvas.width / currentScale;
-        const logicalHeight = canvas.height / currentScale; // Should be approx TARGET_HEIGHT
+        // const logicalHeight = canvas.height / currentScale; 
 
         const targetCamX = player.x - logicalWidth / 3; 
         state.current.camera.x += (targetCamX - state.current.camera.x) * 0.1;
@@ -1081,6 +1081,9 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
     const { player, platforms, zombies, particles, projectiles, collectibles, camera, hordeWarningTimer } = state.current;
     const currentScale = scaleRef.current;
 
+    // --- FIX: DRAW BACKGROUND IN PHYSICAL PIXELS FIRST ---
+    // Reset transform to identity to draw the global background color over the entire canvas
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.fillStyle = '#111827';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -1094,7 +1097,8 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
     ctx.translate(-Math.floor(camera.x), -Math.floor(camera.y));
 
     ctx.fillStyle = '#1f2937';
-    for(let i=0; i<40; i++) { 
+    // Extended loop to cover the entire world width (40 -> 60)
+    for(let i=0; i<60; i++) { 
         const x = (i * 300) - (camera.x * 0.2); 
         ctx.fillRect(x, 100, 100, 1500);
     }

@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#111827" />
     <title>Zombie Run: Dead City</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -12,27 +13,30 @@
         margin: 0;
         padding: 0;
         overflow: hidden;
-        background-color: #111827; /* gray-900 */
+        background-color: #111827; /* gray-900 - Matches game background */
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         touch-action: none;
         -webkit-user-select: none;
         user-select: none;
         -webkit-tap-highlight-color: transparent;
-        overscroll-behavior: none; /* Prevents bounce/elastic scroll on iOS/Android */
+        overscroll-behavior: none;
       }
       #root {
-        height: 100dvh; /* Dynamic viewport height to handle mobile browser bars */
-        width: 100vw;
+        height: 100%;
+        width: 100%;
         position: fixed;
         top: 0;
         left: 0;
         right: 0;
         bottom: 0;
         z-index: 1;
+        background-color: #111827;
       }
       canvas {
         display: block;
         touch-action: none;
+        width: 100%;
+        height: 100%;
       }
     </style>
   <script type="importmap">
