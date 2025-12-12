@@ -18,16 +18,21 @@
         -webkit-user-select: none;
         user-select: none;
         -webkit-tap-highlight-color: transparent;
+        overscroll-behavior: none; /* Prevents bounce/elastic scroll on iOS/Android */
       }
       #root {
-        height: 100%;
-        width: 100%;
+        height: 100dvh; /* Dynamic viewport height to handle mobile browser bars */
+        width: 100vw;
         position: fixed;
         top: 0;
         left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1;
       }
       canvas {
         display: block;
+        touch-action: none;
       }
     </style>
   <script type="importmap">

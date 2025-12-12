@@ -14,7 +14,7 @@ import {
   AIR_FRICTION, 
   MOVE_SPEED, 
   ACCELERATION,
-  AIR_ACCELERATION,
+  AIR_ACCELERATION, 
   JUMP_FORCE, 
   WALL_JUMP_FORCE,
   WALL_SLIDE_SPEED,
@@ -73,7 +73,22 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
   const joystickKnobRef = useRef<HTMLDivElement>(null);
   const joystickTouchId = useRef<number | null>(null);
 
-  // Detect Mobile & Orientation
+  // --- 1. Prevent Scrolling & Handle Resize Globally ---
+  useEffect(() => {
+      // Strictly prevent scrolling on mobile by capturing the event at body level
+      const preventDefault = (e: TouchEvent) => {
+          e.preventDefault();
+      };
+      
+      // 'passive: false' is required to allow preventDefault() to work
+      document.body.addEventListener('touchmove', preventDefault, { passive: false });
+      
+      return () => {
+          document.body.removeEventListener('touchmove', preventDefault);
+      };
+  }, []);
+
+  // Detect Mobile & Orientation & Resize
   useEffect(() => {
     const handleResize = () => {
         const w = window.innerWidth;
@@ -92,8 +107,16 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
         setIsMobile(('ontouchstart' in window) || (navigator.maxTouchPoints > 0));
     };
 
+    // Add listener
     window.addEventListener('resize', handleResize);
-    handleResize(); // Init
+    window.addEventListener('orientationchange', () => {
+        // Delay slightly to allow browser to finish layout change
+        setTimeout(handleResize, 100);
+        setTimeout(handleResize, 500);
+    });
+    
+    // Initial call
+    handleResize();
     
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -1472,24 +1495,28 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
                 <button 
                   className="w-12 h-12 bg-gray-700/80 active:bg-gray-600 backdrop-blur-md rounded-full border-2 border-gray-400 flex items-center justify-center text-white text-xs font-bold shadow-lg"
                   onTouchStart={handleTouch('r', true)} onTouchEnd={handleTouch('r', false)}
+                  style={{ touchAction: 'none' }}
                 >
                     R
                 </button>
                 <button 
                   className="w-12 h-12 bg-gray-700/80 active:bg-gray-600 backdrop-blur-md rounded-full border-2 border-gray-400 flex items-center justify-center text-white text-xs font-bold shadow-lg"
                   onTouchStart={handleTouch('c', true)} onTouchEnd={handleTouch('c', false)}
+                  style={{ touchAction: 'none' }}
                 >
                     SWAP
                 </button>
                 <button 
                   className="w-12 h-12 bg-red-900/80 active:bg-red-800 backdrop-blur-md rounded-full border-2 border-red-400 flex items-center justify-center text-white text-xl font-bold shadow-lg"
                   onTouchStart={handleTouch('v', true)} onTouchEnd={handleTouch('v', false)}
+                  style={{ touchAction: 'none' }}
                 >
                     +
                 </button>
                 <button 
                    className="w-12 h-12 bg-yellow-600/80 active:bg-yellow-500 backdrop-blur-md rounded-full border-2 border-yellow-400 flex items-center justify-center text-white font-bold shadow-lg"
                    onTouchStart={handlePause}
+                   style={{ touchAction: 'none' }}
                 >
                     ||
                 </button>
@@ -1503,6 +1530,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
                 onTouchMove={handleJoystickTouch}
                 onTouchEnd={handleJoystickEnd}
                 onTouchCancel={handleJoystickEnd}
+                style={{ touchAction: 'none' }}
             >
                 {/* Visual indicator of center */}
                 <div className="absolute w-2 h-2 bg-gray-400/50 rounded-full"></div>
@@ -1520,6 +1548,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
                  <button 
                    className="absolute bottom-6 left-2 w-20 h-20 bg-red-600/80 rounded-full border-4 border-white active:bg-red-500 active:scale-95 transition-transform text-white font-bold text-xs flex items-center justify-center shadow-xl backdrop-blur-sm pointer-events-auto"
                    onTouchStart={handleTouch('x', true)} onTouchEnd={handleTouch('x', false)}
+                   style={{ touchAction: 'none' }}
                 >
                     FIRE
                 </button>
@@ -1528,6 +1557,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
                 <button 
                    className="absolute bottom-0 right-0 w-24 h-24 bg-blue-600/80 rounded-full border-4 border-white active:bg-blue-500 active:scale-95 transition-transform text-white font-bold text-sm flex items-center justify-center shadow-xl backdrop-blur-sm pointer-events-auto"
                    onTouchStart={handleTouch('z', true)} onTouchEnd={handleTouch('z', false)}
+                   style={{ touchAction: 'none' }}
                 >
                     JUMP
                 </button>
@@ -1536,6 +1566,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
                 <button 
                    className="absolute top-6 right-10 w-16 h-16 bg-cyan-600/80 rounded-full border-4 border-white active:bg-cyan-500 active:scale-95 transition-transform text-white font-bold text-xs flex items-center justify-center shadow-xl backdrop-blur-sm pointer-events-auto"
                    onTouchStart={handleTouch(' ', true)} onTouchEnd={handleTouch(' ', false)}
+                   style={{ touchAction: 'none' }}
                 >
                     DASH
                 </button>
