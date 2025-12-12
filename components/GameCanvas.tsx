@@ -62,7 +62,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
   const FIXED_TIME_STEP = 1000 / 60; 
   
   // Viewport Logic
-  const TARGET_HEIGHT = 640; // The logical height the game is designed for
+  const TARGET_HEIGHT = 720; // Increased from 640 to zoom out camera slightly
   const scaleRef = useRef<number>(1);
   
   // Input State
