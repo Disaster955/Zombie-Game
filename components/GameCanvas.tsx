@@ -3,12 +3,8 @@ import {
   GameState, 
   GameStatus, 
   Player, 
-  Zombie, 
-  Platform, 
   Rect,
-  Particle,
   WeaponType,
-  Projectile,
   Collectible,
   ZombieType
 } from '../types';
@@ -66,17 +62,33 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
   const keys = useRef<{ [key: string]: boolean }>({});
   const prevKeys = useRef<{ [key: string]: boolean }>({}); 
   const [isMobile, setIsMobile] = useState(false);
-  
+  const [isLandscape, setIsLandscape] = useState(true);
+  const [dimensions, setDimensions] = useState({ w: 0, h: 0 }); // Trigger render on resize
+
   // Joystick Refs
   const joystickBaseRef = useRef<HTMLDivElement>(null);
   const joystickKnobRef = useRef<HTMLDivElement>(null);
+  const joystickTouchId = useRef<number | null>(null);
 
-  // Detect Mobile
+  // Detect Mobile & Orientation
   useEffect(() => {
-    const checkMobile = () => {
-      return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    const handleResize = () => {
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        
+        if (canvasRef.current) {
+            canvasRef.current.width = w;
+            canvasRef.current.height = h;
+        }
+        setDimensions({ w, h });
+        setIsLandscape(w > h);
+        setIsMobile(('ontouchstart' in window) || (navigator.maxTouchPoints > 0));
     };
-    setIsMobile(checkMobile());
+
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Init
+    
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   // Game State
@@ -1328,24 +1340,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
     };
   }, []);
 
-  useEffect(() => {
-    const handleResize = () => {
-        if (canvasRef.current) {
-            canvasRef.current.width = window.innerWidth;
-            canvasRef.current.height = window.innerHeight;
-            // Immediate redraw to avoid flickering
-            const ctx = canvasRef.current.getContext('2d');
-            if(ctx) {
-                 // Minimal redraw if needed, or wait for next tick.
-                 // We call drawWithHUD to ensure screen isn't empty if paused.
-            }
-        }
-    };
-    window.addEventListener('resize', handleResize);
-    handleResize();
-    return () => window.removeEventListener('resize', handleResize);
-  }, []); // Remove dependency on drawWithHUD to prevent loop, logic is moved
-
   const handleTouch = (key: string, pressed: boolean) => (e: React.TouchEvent | React.MouseEvent) => {
     e.preventDefault(); 
     if (state.current.status === GameStatus.PLAYING) {
@@ -1367,9 +1361,23 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
     e.preventDefault();
     if (state.current.status !== GameStatus.PLAYING) return;
     
-    const touch = e.targetTouches[0];
+    // Multi-touch support: Find the touch that started on the joystick
+    let touch = e.changedTouches[0];
+    if (joystickTouchId.current !== null) {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === joystickTouchId.current) {
+                touch = e.changedTouches[i];
+                break;
+            }
+        }
+    }
+    
     const base = joystickBaseRef.current;
     if (!base || !touch) return;
+    
+    if (e.type === 'touchstart') {
+        joystickTouchId.current = touch.identifier;
+    }
     
     const rect = base.getBoundingClientRect();
     const centerX = rect.width / 2;
@@ -1382,7 +1390,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
     const dy = touchY - centerY;
     
     const distance = Math.sqrt(dx*dx + dy*dy);
-    const maxRadius = 30; 
+    const maxRadius = rect.width / 2 - 20; // Keep it somewhat inside
     
     let clampedX = dx;
     let clampedY = dy;
@@ -1397,13 +1405,15 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
         joystickKnobRef.current.style.transform = `translate(${clampedX}px, ${clampedY}px)`;
     }
     
-    keys.current['arrowleft'] = clampedX < -10;
-    keys.current['arrowright'] = clampedX > 10;
-    keys.current['arrowdown'] = clampedY > 15; 
+    // Lower threshold for better response
+    keys.current['arrowleft'] = clampedX < -15;
+    keys.current['arrowright'] = clampedX > 15;
+    keys.current['arrowdown'] = clampedY > 30; 
   };
   
   const handleJoystickEnd = (e: React.TouchEvent) => {
      e.preventDefault();
+     joystickTouchId.current = null;
      if (joystickKnobRef.current) {
         joystickKnobRef.current.style.transform = `translate(0px, 0px)`;
     }
@@ -1415,73 +1425,94 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
   return (
     <div className="relative w-full h-full" style={{ touchAction: 'none' }}>
       <canvas ref={canvasRef} className="block w-full h-full" />
+
+      {/* Portrait Warning Overlay */}
+      {isMobile && !isLandscape && (
+         <div className="fixed inset-0 z-[60] bg-black flex flex-col items-center justify-center text-white p-6">
+            <div className="text-6xl mb-6 animate-bounce">📱 ⟲</div>
+            <h2 className="text-2xl font-bold text-center mb-2">Gira tu dispositivo</h2>
+            <p className="text-gray-400 text-center">Este juego está optimizado para jugarse en horizontal.</p>
+         </div>
+      )}
       
-      {(isMobile || window.innerWidth < 1024) && gameStatus === GameStatus.PLAYING && (
-          <>
-            <div className="absolute top-4 right-4 flex gap-4">
+      {/* Mobile Controls Overlay - Using fixed inset-0 to ensure it's always on top and visible */}
+      {isMobile && isLandscape && gameStatus === GameStatus.PLAYING && (
+          <div className="fixed inset-0 z-50 pointer-events-none select-none">
+            
+            {/* Top Right Utils */}
+            <div className="absolute top-4 right-4 flex gap-3 pointer-events-auto">
                 <button 
-                  className="w-10 h-10 bg-gray-700/80 rounded border border-gray-400 flex items-center justify-center text-white text-xs font-bold"
+                  className="w-12 h-12 bg-gray-700/60 active:bg-gray-600 backdrop-blur-sm rounded-full border border-gray-400 flex items-center justify-center text-white text-xs font-bold shadow-lg"
                   onTouchStart={handleTouch('r', true)} onTouchEnd={handleTouch('r', false)}
                 >
                     R
                 </button>
                 <button 
-                  className="w-10 h-10 bg-gray-700/80 rounded border border-gray-400 flex items-center justify-center text-white text-xs font-bold"
+                  className="w-12 h-12 bg-gray-700/60 active:bg-gray-600 backdrop-blur-sm rounded-full border border-gray-400 flex items-center justify-center text-white text-xs font-bold shadow-lg"
                   onTouchStart={handleTouch('c', true)} onTouchEnd={handleTouch('c', false)}
                 >
                     SWAP
                 </button>
                 <button 
-                  className="w-10 h-10 bg-red-900/80 rounded border border-red-400 flex items-center justify-center text-white text-xl font-bold"
+                  className="w-12 h-12 bg-red-900/60 active:bg-red-800 backdrop-blur-sm rounded-full border border-red-400 flex items-center justify-center text-white text-xl font-bold shadow-lg"
                   onTouchStart={handleTouch('v', true)} onTouchEnd={handleTouch('v', false)}
                 >
                     +
                 </button>
                 <button 
-                   className="w-10 h-10 bg-yellow-600/80 rounded border border-yellow-400 flex items-center justify-center text-white font-bold"
+                   className="w-12 h-12 bg-yellow-600/60 active:bg-yellow-500 backdrop-blur-sm rounded-full border border-yellow-400 flex items-center justify-center text-white font-bold shadow-lg"
                    onTouchStart={handlePause}
                 >
                     ||
                 </button>
             </div>
 
+            {/* Bottom Left: Enhanced Analog Joystick */}
             <div 
                 ref={joystickBaseRef}
-                className="absolute bottom-8 left-8 w-32 h-32 bg-gray-800/50 rounded-full border-2 border-gray-500 flex items-center justify-center backdrop-blur-sm touch-none"
+                className="absolute bottom-8 left-8 w-48 h-48 bg-gray-800/30 rounded-full border-4 border-gray-500/50 flex items-center justify-center backdrop-blur-md pointer-events-auto shadow-2xl"
                 onTouchStart={handleJoystickTouch}
                 onTouchMove={handleJoystickTouch}
                 onTouchEnd={handleJoystickEnd}
+                onTouchCancel={handleJoystickEnd}
             >
+                {/* Visual indicator of center */}
+                <div className="absolute w-2 h-2 bg-gray-400/50 rounded-full"></div>
+                
                 <div 
                     ref={joystickKnobRef}
-                    className="w-12 h-12 bg-white/80 rounded-full shadow-lg pointer-events-none"
-                    style={{ transform: 'translate(0px, 0px)' }}
+                    className="w-20 h-20 bg-white/90 rounded-full shadow-xl pointer-events-none border-4 border-gray-300"
+                    style={{ transform: 'translate(0px, 0px)', transition: 'transform 0.05s linear' }}
                 ></div>
             </div>
 
-            <div className="absolute bottom-6 right-6 w-48 h-48 pointer-events-none">
+            {/* Bottom Right: Action Cluster (Ergonomic Arc) */}
+            <div className="absolute bottom-8 right-8 w-64 h-64 pointer-events-none">
+                 {/* Shoot (Left) */}
                  <button 
-                   className="absolute bottom-4 left-0 w-16 h-16 bg-red-600/80 rounded-full border-2 border-white active:bg-red-400 text-white font-bold text-xs flex items-center justify-center shadow-lg pointer-events-auto"
+                   className="absolute bottom-6 left-2 w-20 h-20 bg-red-600/70 rounded-full border-4 border-white/50 active:bg-red-500 active:scale-95 transition-transform text-white font-bold text-xs flex items-center justify-center shadow-xl backdrop-blur-sm pointer-events-auto"
                    onTouchStart={handleTouch('x', true)} onTouchEnd={handleTouch('x', false)}
                 >
                     FIRE
                 </button>
                 
+                {/* Jump (Main - Bottom Right) */}
                 <button 
-                   className="absolute bottom-0 right-0 w-20 h-20 bg-blue-600/80 rounded-full border-2 border-white active:bg-blue-400 text-white font-bold text-sm flex items-center justify-center shadow-xl pointer-events-auto"
+                   className="absolute bottom-0 right-0 w-24 h-24 bg-blue-600/70 rounded-full border-4 border-white/50 active:bg-blue-500 active:scale-95 transition-transform text-white font-bold text-sm flex items-center justify-center shadow-xl backdrop-blur-sm pointer-events-auto"
                    onTouchStart={handleTouch('z', true)} onTouchEnd={handleTouch('z', false)}
                 >
                     JUMP
                 </button>
 
+                {/* Dash (Top) */}
                 <button 
-                   className="absolute top-4 right-8 w-14 h-14 bg-cyan-600/80 rounded-full border-2 border-white active:bg-cyan-400 text-white font-bold text-xs flex items-center justify-center shadow-lg pointer-events-auto"
+                   className="absolute top-6 right-10 w-16 h-16 bg-cyan-600/70 rounded-full border-4 border-white/50 active:bg-cyan-500 active:scale-95 transition-transform text-white font-bold text-xs flex items-center justify-center shadow-xl backdrop-blur-sm pointer-events-auto"
                    onTouchStart={handleTouch(' ', true)} onTouchEnd={handleTouch(' ', false)}
                 >
                     DASH
                 </button>
             </div>
-          </>
+          </div>
       )}
     </div>
   );
