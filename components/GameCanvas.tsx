@@ -1533,10 +1533,10 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
       
       {/* Mobile Controls Overlay - Using fixed inset-0 to ensure it's always on top and visible */}
       {isMobile && isLandscape && gameStatus === GameStatus.PLAYING && (
-          <div className="fixed inset-0 z-50 pointer-events-none select-none">
+          <>
             
-            {/* Top Right Utils - Reduced size for phone */}
-            <div className="absolute top-4 right-4 flex gap-4 pointer-events-auto">
+            {/* Top Right Utils - Fixed */}
+            <div className="fixed top-4 right-4 flex gap-4 z-50 pointer-events-auto">
                 <button 
                   className="w-12 h-12 bg-gray-700/80 active:bg-gray-600 backdrop-blur-md rounded-full border border-gray-400 flex items-center justify-center text-white text-xs font-bold shadow-lg"
                   onTouchStart={handleTouch('r', true)} onTouchEnd={handleTouch('r', false)}
@@ -1567,10 +1567,10 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
                 </button>
             </div>
 
-            {/* Bottom Left: Enhanced Analog Joystick - Larger */}
+            {/* Joystick - Fixed Bottom Left */}
             <div 
                 ref={joystickBaseRef}
-                className="absolute bottom-10 left-10 w-40 h-40 bg-gray-800/60 rounded-full border-2 border-gray-400 flex items-center justify-center backdrop-blur-md pointer-events-auto shadow-2xl"
+                className="fixed bottom-[30px] left-[30px] w-[140px] h-[140px] bg-gray-800/60 rounded-full border-2 border-gray-400 flex items-center justify-center backdrop-blur-md z-50 pointer-events-auto shadow-2xl"
                 onTouchStart={handleJoystickTouch}
                 onTouchMove={handleJoystickTouch}
                 onTouchEnd={handleJoystickEnd}
@@ -1587,36 +1587,35 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
                 ></div>
             </div>
 
-            {/* Bottom Right: Action Cluster (Ergonomic Arc) - Larger */}
-            <div className="absolute bottom-4 right-4 w-64 h-64 pointer-events-none">
-                 {/* Shoot (Left) */}
-                 <button 
-                   className="absolute bottom-6 left-2 w-20 h-20 bg-red-600/80 rounded-full border-2 border-white active:bg-red-500 active:scale-95 transition-transform text-white font-bold text-xs flex items-center justify-center shadow-xl backdrop-blur-sm pointer-events-auto"
-                   onTouchStart={handleTouch('x', true)} onTouchEnd={handleTouch('x', false)}
-                   style={{ touchAction: 'none' }}
-                >
-                    FIRE
-                </button>
-                
-                {/* Jump (Main - Bottom Right) */}
-                <button 
-                   className="absolute bottom-0 right-0 w-32 h-32 bg-blue-600/80 rounded-full border-2 border-white active:bg-blue-500 active:scale-95 transition-transform text-white font-bold text-lg flex items-center justify-center shadow-xl backdrop-blur-sm pointer-events-auto"
-                   onTouchStart={handleTouch('z', true)} onTouchEnd={handleTouch('z', false)}
-                   style={{ touchAction: 'none' }}
-                >
-                    JUMP
-                </button>
+            {/* Action Buttons - Fixed Positioning with Pixel values */}
+            
+            {/* Fire - Left of Jump */}
+            <button 
+                className="fixed bottom-[30px] right-[150px] w-[80px] h-[80px] bg-red-600/80 rounded-full border-2 border-white active:bg-red-500 active:scale-95 transition-transform text-white font-bold text-xs flex items-center justify-center shadow-xl backdrop-blur-sm z-50 pointer-events-auto"
+                onTouchStart={handleTouch('x', true)} onTouchEnd={handleTouch('x', false)}
+                style={{ touchAction: 'none' }}
+            >
+                FIRE
+            </button>
+            
+            {/* Jump - Main Bottom Right */}
+            <button 
+                className="fixed bottom-[20px] right-[20px] w-[110px] h-[110px] bg-blue-600/80 rounded-full border-2 border-white active:bg-blue-500 active:scale-95 transition-transform text-white font-bold text-lg flex items-center justify-center shadow-xl backdrop-blur-sm z-50 pointer-events-auto"
+                onTouchStart={handleTouch('z', true)} onTouchEnd={handleTouch('z', false)}
+                style={{ touchAction: 'none' }}
+            >
+                JUMP
+            </button>
 
-                {/* Dash (Top) */}
-                <button 
-                   className="absolute top-10 right-10 w-16 h-16 bg-cyan-600/80 rounded-full border-2 border-white active:bg-cyan-500 active:scale-95 transition-transform text-white font-bold text-xs flex items-center justify-center shadow-xl backdrop-blur-sm pointer-events-auto"
-                   onTouchStart={handleTouch(' ', true)} onTouchEnd={handleTouch(' ', false)}
-                   style={{ touchAction: 'none' }}
-                >
-                    DASH
-                </button>
-            </div>
-          </div>
+            {/* Dash - Above Jump */}
+            <button 
+                className="fixed bottom-[150px] right-[30px] w-[80px] h-[80px] bg-cyan-600/80 rounded-full border-2 border-white active:bg-cyan-500 active:scale-95 transition-transform text-white font-bold text-xs flex items-center justify-center shadow-xl backdrop-blur-sm z-50 pointer-events-auto"
+                onTouchStart={handleTouch(' ', true)} onTouchEnd={handleTouch(' ', false)}
+                style={{ touchAction: 'none' }}
+            >
+                DASH
+            </button>
+          </>
       )}
     </div>
   );
