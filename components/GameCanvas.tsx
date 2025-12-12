@@ -1492,15 +1492,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
   return (
     <div className="relative w-full h-full" style={{ touchAction: 'none' }}>
       <canvas ref={canvasRef} className="block w-full h-full" />
-
-      {/* Portrait Warning Overlay */}
-      {isMobile && !isLandscape && (
-         <div className="fixed inset-0 z-[60] bg-black flex flex-col items-center justify-center text-white p-6">
-            <div className="text-6xl mb-6 animate-bounce">📱 ⟲</div>
-            <h2 className="text-2xl font-bold text-center mb-2">Gira tu dispositivo</h2>
-            <p className="text-gray-400 text-center">Este juego está optimizado para jugarse en horizontal.</p>
-         </div>
-      )}
       
       {/* Mobile Controls Overlay - Using fixed inset-0 to ensure it's always on top and visible */}
       {isMobile && isLandscape && gameStatus === GameStatus.PLAYING && (

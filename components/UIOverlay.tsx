@@ -12,6 +12,22 @@ interface UIOverlayProps {
 const UIOverlay: React.FC<UIOverlayProps> = ({ status, score, onStart, onRestart, onResume }) => {
   if (status === GameStatus.PLAYING) return null;
 
+  const handleFullscreen = async () => {
+    try {
+      const elem = document.documentElement;
+      if (!document.fullscreenElement) {
+        await elem.requestFullscreen();
+        // @ts-ignore - ScreenOrientation type definitions might be missing
+        if (screen.orientation && screen.orientation.lock) {
+            // @ts-ignore
+            await screen.orientation.lock('landscape').catch((e) => console.log('Lock failed:', e));
+        }
+      }
+    } catch (err) {
+      console.error("Error attempting to enable fullscreen:", err);
+    }
+  };
+
   return (
     <div className="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm z-50 p-4">
       {/* Container simplified for mobile landscape - centered and minimal */}
@@ -33,6 +49,13 @@ const UIOverlay: React.FC<UIOverlayProps> = ({ status, score, onStart, onRestart
               className="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-full text-sm md:text-lg transition-all hover:scale-105 shadow-[0_0_15px_rgba(37,99,235,0.5)] border border-blue-400 w-full"
             >
               START GAME
+            </button>
+            
+            <button 
+              onClick={handleFullscreen}
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 font-bold rounded-lg text-xs md:text-sm transition-transform hover:scale-105 border border-gray-500 w-full"
+            >
+              PANTALLA COMPLETA
             </button>
           </>
         )}
