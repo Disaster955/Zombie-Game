@@ -1583,7 +1583,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
                 
                 {/* Jump (Main - Bottom Right) */}
                 <button 
-                   className="absolute bottom-0 right-0 w-24 h-24 bg-blue-600/80 rounded-full border-2 border-white active:bg-blue-500 active:scale-95 transition-transform text-white font-bold text-sm flex items-center justify-center shadow-xl backdrop-blur-sm pointer-events-auto"
+                   className="absolute bottom-0 right-0 w-32 h-32 bg-blue-600/80 rounded-full border-2 border-white active:bg-blue-500 active:scale-95 transition-transform text-white font-bold text-lg flex items-center justify-center shadow-xl backdrop-blur-sm pointer-events-auto"
                    onTouchStart={handleTouch('z', true)} onTouchEnd={handleTouch('z', false)}
                    style={{ touchAction: 'none' }}
                 >
