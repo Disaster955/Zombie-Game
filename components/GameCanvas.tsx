@@ -67,7 +67,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
   const prevKeys = useRef<{ [key: string]: boolean }>({}); 
   const [isMobile, setIsMobile] = useState(false);
   
-  // Joystick Refs (Direct DOM manipulation for performance)
+  // Joystick Refs
   const joystickBaseRef = useRef<HTMLDivElement>(null);
   const joystickKnobRef = useRef<HTMLDivElement>(null);
 
@@ -248,17 +248,13 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
   };
 
   const spawnHorde = (isMini: boolean) => {
-      // Show Warning
       state.current.hordeWarningTimer = HORDE_WARNING_DURATION;
-      
-      // Play Alarm Sound!
       soundManager.playHordeAlert();
       
       const count = isMini ? 3 : 8;
       const { player, camera } = state.current;
       const screenWidth = window.innerWidth;
       
-      // Spawn points: Left and Right of camera view
       const spawnPoints = [
           camera.x - 50,
           camera.x + screenWidth + 50
@@ -271,7 +267,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
 
           state.current.zombies.push({
             x: spawnX,
-            y: FLOOR_Y - 100, // Drop from sky/high
+            y: FLOOR_Y - 100, 
             w: stats.w,
             h: stats.h,
             vx: 0,
@@ -284,7 +280,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
             isDead: false,
             patrolCenter: spawnX,
             patrolRange: 200,
-            aggro: true, // Auto aggro
+            aggro: true, 
             attackTimer: 0,
             type: type,
             searchTimer: 300,
@@ -309,7 +305,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
         state.current.hordeTimer--;
         if (state.current.hordeTimer <= 0) {
             spawnHorde(false);
-            state.current.hordeTimer = HORDE_INTERVAL; // Reset timer
+            state.current.hordeTimer = HORDE_INTERVAL; 
         }
     }
     
@@ -327,18 +323,16 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
         player.dashTimer = DASH_DURATION;
         player.dashCooldown = DASH_COOLDOWN;
         
-        // Impulse straight forward (ignore current velocity)
         player.vx = player.facingRight ? DASH_SPEED : -DASH_SPEED;
-        player.vy = 0; // Anti-gravity start
+        player.vy = 0; 
         
-        spawnParticles(player.x + player.w/2, player.y + player.h/2, '#06b6d4', 15); // Cyan trail
-        soundManager.playShoot(WeaponType.SHOTGUN); // Re-use loud sound for dash
+        spawnParticles(player.x + player.w/2, player.y + player.h/2, '#06b6d4', 15);
+        soundManager.playShoot(WeaponType.SHOTGUN); 
     }
 
     // B. Sliding Mechanic
     const downPressed = keys.current['arrowdown'];
     
-    // Start Slide
     if (downPressed && player.isGrounded && !player.isSliding && !player.isDashing && Math.abs(player.vx) > 1) {
         player.isSliding = true;
         player.slideTimer = SLIDE_DURATION;
@@ -356,19 +350,18 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
         }
     }
 
-    // Process Dash Physics override
     if (player.isDashing) {
         player.dashTimer--;
-        player.vy = 0; // Floating straight
+        player.vy = 0; 
         spawnParticles(player.x + (player.facingRight ? 0 : player.w), player.y + Math.random() * player.h, '#06b6d4', 1);
 
         if (player.dashTimer <= 0) {
             player.isDashing = false;
-            player.vx *= 0.5; // Slow down after dash
+            player.vx *= 0.5; 
         }
     }
 
-    // C. Acceleration & Input (Only if not sliding and not dashing)
+    // C. Acceleration & Input
     if (!player.isSliding && !player.isDashing) {
         let dir = 0;
         if (keys.current['arrowright']) dir = 1;
@@ -395,7 +388,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
     const justPressedJump = jumpPressed && !prevJumpPressed;
 
     if (!player.isDashing) {
-        // Wall Jump
         if (justPressedJump && player.isWallSliding && !player.isGrounded) {
              player.vy = WALL_JUMP_FORCE.y;
              player.vx = -player.wallDir * WALL_JUMP_FORCE.x; 
@@ -404,7 +396,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
              spawnParticles(player.wallDir === 1 ? player.x + player.w : player.x, player.y + player.h/2, '#ffffff', 8);
              soundManager.playJump();
         }
-        // Regular Jump / Double Jump
         else if (justPressedJump) {
           if (player.jumpsRemaining > 0) {
             player.vy = JUMP_FORCE;
@@ -419,7 +410,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
 
     // --- 3. Weapon Handling ---
 
-    // Switch Weapon (C)
     const switchPressed = keys.current['c'];
     const prevSwitchPressed = prevKeys.current['c'];
     if (switchPressed && !prevSwitchPressed && player.weapons.length > 1 && !player.isReloading) {
@@ -427,7 +417,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
         soundManager.playCollect(); 
     }
 
-    // Use Medkit (V)
     const healPressed = keys.current['v'];
     const prevHealPressed = prevKeys.current['v'];
     if (healPressed && !prevHealPressed) {
@@ -439,11 +428,9 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
         }
     }
 
-    // Reload (R)
     const reloadPressed = keys.current['r'];
     const prevReloadPressed = prevKeys.current['r'];
     if (reloadPressed && !prevReloadPressed && !player.isReloading && currentWeaponType !== WeaponType.PISTOL) {
-        // Check if we need to reload
         if (player.ammoClip[currentWeaponType] < weaponStats.clipSize && player.ammoReserve[currentWeaponType] > 0) {
             player.isReloading = true;
             player.reloadTimer = weaponStats.reloadDuration;
@@ -451,26 +438,21 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
         }
     }
 
-    // Process Reload Timer
     if (player.isReloading) {
         player.reloadTimer--;
         if (player.reloadTimer <= 0) {
             player.isReloading = false;
-            // Transfer ammo
             const currentClip = player.ammoClip[currentWeaponType];
             const needed = weaponStats.clipSize - currentClip;
             const available = player.ammoReserve[currentWeaponType];
             const toTransfer = Math.min(needed, available);
-            
             player.ammoClip[currentWeaponType] += toTransfer;
             player.ammoReserve[currentWeaponType] -= toTransfer;
         }
     }
 
-    // Update Previous Keys
     prevKeys.current = { ...keys.current };
 
-    // Attack (Shooting) (X)
     if (keys.current['x'] && player.attackCooldown === 0 && !player.isWallSliding && !player.isSliding && !player.isDashing && !player.isReloading) {
       
       const ammoCount = player.ammoClip[currentWeaponType];
@@ -480,7 +462,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
         player.isAttacking = true;
         player.attackCooldown = weaponStats.cooldown;
         
-        // Consume Ammo
         if (currentWeaponType !== WeaponType.PISTOL) {
             player.ammoClip[currentWeaponType]--;
         }
@@ -499,18 +480,13 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
             color: '#fbbf24'
         });
 
-        // Sound
         soundManager.playShoot(currentWeaponType);
-
-        // Tiny recoil
         if (!player.isGrounded) player.vx += player.facingRight ? -1 : 1; 
 
       } else {
-          // Dry Fire (Out of Ammo)
-          player.attackCooldown = 15; // Short cooldown
+          player.attackCooldown = 15; 
           soundManager.playDryFire();
           
-          // Optional: Auto-reload if tried to fire empty
           if (!player.isReloading && player.ammoReserve[currentWeaponType] > 0) {
              player.isReloading = true;
              player.reloadTimer = weaponStats.reloadDuration;
@@ -519,7 +495,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
       }
     }
 
-    // --- 4. Physics Application (X Axis) ---
+    // --- 4. Physics Application ---
     
     player.x += player.vx;
     player.wallDir = 0; 
@@ -534,7 +510,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
             player.x = plat.x + plat.w;
             player.wallDir = -1;
         }
-        // Collision stops dash
         if (player.isDashing) {
              player.isDashing = false;
         }
@@ -543,13 +518,10 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
       }
     }
 
-    // --- 5. Physics Application (Y Axis) ---
-    
     if (!player.isDashing) {
         player.vy += GRAVITY;
     }
     
-    // Wall Slide Physics
     player.isWallSliding = false;
     if (player.wallDir !== 0 && !player.isGrounded && player.vy > 0 && !player.isDashing) {
         player.isWallSliding = true;
@@ -565,7 +537,9 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
       if (checkCollision(player, plat)) {
         if (plat.type === 'goal') {
           state.current.status = GameStatus.VICTORY;
-          soundManager.playCollect(); // Victory sound
+          soundManager.playCollect(); 
+          // IMPORTANT: Update score on victory
+          onScoreUpdate(state.current.score);
           onStatusChange(GameStatus.VICTORY);
           return; 
         }
@@ -577,8 +551,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
           player.jumpsRemaining = MAX_JUMPS;
           player.isWallSliding = false;
           
-          // --- CHECKPOINT SYSTEM ---
-          // Save valid safe spots (only on ground or platform, not obstacles or near pits)
           if (plat.type === 'ground' || plat.type === 'platform') {
               player.lastSafeX = player.x;
               player.lastSafeY = player.y;
@@ -591,21 +563,17 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
       }
     }
 
-    // --- VOID DAMAGE SYSTEM (Fall Logic) ---
     if (player.y > FLOOR_Y + 400) {
         if (player.health > 1) {
-            // Respawn
             player.health -= 1;
             player.x = player.lastSafeX;
-            player.y = player.lastSafeY - 50; // slightly above
+            player.y = player.lastSafeY - 50; 
             player.vx = 0;
             player.vy = 0;
             player.invincibleTimer = INVINCIBLE_FRAMES;
             soundManager.playDamage();
-            // Flash screen red effect
             spawnParticles(canvasRef.current?.width ? canvasRef.current.width/2 + state.current.camera.x : player.x, player.y, '#ff0000', 50);
         } else {
-            // Die
             player.health = 0;
             soundManager.playDamage();
         }
@@ -644,27 +612,19 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
                 const wStats = WEAPONS[item.weaponType];
 
                 if (hasWeapon) {
-                    // Refill Ammo Reserve if we already have it
                     player.ammoReserve[item.weaponType] = Math.min(player.ammoReserve[item.weaponType] + wStats.pickupAmmo, wStats.maxAmmo);
                     state.current.score += 25;
-                    onScoreUpdate(state.current.score);
                     collected = true;
                     soundManager.playCollect();
                 } else {
-                    // New Weapon or Swap
-                    // Grant ammo for the new weapon
                     player.ammoReserve[item.weaponType] = Math.min(player.ammoReserve[item.weaponType] + wStats.pickupAmmo, wStats.maxAmmo);
-                    // Ensure full clip on pickup for fun
                     player.ammoClip[item.weaponType] = wStats.clipSize; 
 
                     if (player.weapons.length < MAX_WEAPONS) {
-                        // Add to inventory
                         player.weapons.push(item.weaponType);
                         player.currentWeaponIndex = player.weapons.length - 1; 
                     } else {
-                        // Inventory Full -> Swap active weapon
                         player.weapons[player.currentWeaponIndex] = item.weaponType;
-                        // Cancel reload if swapping
                         player.isReloading = false;
                         player.reloadTimer = 0;
                     }
@@ -672,7 +632,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
                     collected = true;
                     spawnParticles(player.x + player.w/2, player.y, '#fbbf24', 15);
                     state.current.score += 50;
-                    onScoreUpdate(state.current.score);
                     soundManager.playCollect();
                 }
             } else if (item.type === 'ammo' && item.weaponType) {
@@ -687,177 +646,119 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
         }
     });
 
-    // --- 8. Advanced Zombie AI ---
+    // --- 8. AI & Combat ---
     state.current.zombies = zombies.filter(z => !z.isDead);
-    
     state.current.zombies.forEach(zombie => {
-      // A. Flocking / Separation
+      // Separation
       let sepVx = 0;
       state.current.zombies.forEach(other => {
            if (zombie === other) return;
-           if (Math.abs(zombie.y - other.y) > 50) return; // Ignore if on different floors
-           
+           if (Math.abs(zombie.y - other.y) > 50) return;
            const dist = zombie.x - other.x;
            const minDist = (zombie.w + other.w) / 2 * 0.9;
-           
-           if (Math.abs(dist) < minDist) {
-               // Push apart
-               sepVx += (dist > 0 ? 1 : -1) * 0.3; 
-           }
+           if (Math.abs(dist) < minDist) sepVx += (dist > 0 ? 1 : -1) * 0.3; 
       });
 
-      // B. State Determination (Aggro & Persistence)
       const distToPlayer = Math.sqrt(Math.pow(player.x - zombie.x, 2) + Math.pow(player.y - zombie.y, 2));
       const stats = ZOMBIE_STATS[zombie.type];
       const canSeePlayer = distToPlayer < 400 && Math.abs(player.y - zombie.y) < 200;
       
       if (canSeePlayer) {
         zombie.aggro = true;
-        zombie.searchTimer = 180; // Search for 3 seconds if lost
+        zombie.searchTimer = 180; 
         zombie.lastKnownX = player.x;
         if (Math.random() < 0.005) soundManager.playZombieGroan();
       } else {
-        // Persistence Logic
         if (zombie.aggro) {
             zombie.searchTimer--;
-            if (zombie.searchTimer <= 0) {
-                zombie.aggro = false; // Give up
-            }
+            if (zombie.searchTimer <= 0) zombie.aggro = false; 
         }
       }
 
-      // SCREAMER LOGIC (Infinite Spawn)
       if (zombie.type === ZombieType.SCREAMER && zombie.aggro) {
-          // Continuous Spawning logic
           zombie.summonTimer--;
           if (zombie.summonTimer <= 0) {
              spawnZombieNear(zombie.x, zombie.y);
-             zombie.summonTimer = 120; // Spawn every 2 seconds while aggro
+             zombie.summonTimer = 120;
              spawnParticles(zombie.x + zombie.w/2, zombie.y, '#ec4899', 5);
           }
-
           if (zombie.attackTimer > 0) {
               zombie.attackTimer--;
           } else {
-              // BIG SCREAM (Horde Trigger + Alert)
-              zombie.attackTimer = 600; // 10 seconds cooldown
+              zombie.attackTimer = 600; 
               soundManager.playZombieScream();
-              
-              // Visual Pulse
               spawnParticles(zombie.x + zombie.w/2, zombie.y + zombie.h/2, '#ec4899', 20);
-              
-              // Alert others
               state.current.zombies.forEach(other => {
                   if (other === zombie) return;
-                  const d = Math.sqrt(Math.pow(other.x - zombie.x, 2) + Math.pow(other.y - zombie.y, 2));
-                  if (d < 800) { // Screen width range
+                  if (Math.sqrt(Math.pow(other.x - zombie.x, 2) + Math.pow(other.y - zombie.y, 2)) < 800) {
                       other.aggro = true;
                       other.searchTimer = 180;
-                      other.lastKnownX = zombie.x; // Come to the scream
+                      other.lastKnownX = zombie.x;
                   }
               });
           }
       }
 
-      // C. Target Velocity Calculation (AI Navigation)
       let targetVx = 0;
-
       if (zombie.aggro) {
-          // Chase Player or go to last known location
           const targetX = canSeePlayer ? player.x : zombie.lastKnownX;
           const dir = targetX > zombie.x ? 1 : -1;
-          
-          // Stop if reached last known location and player is gone
           if (!canSeePlayer && Math.abs(targetX - zombie.x) < 10) {
               targetVx = 0;
           } else {
               targetVx = dir * stats.speed;
               zombie.facingRight = dir > 0;
           }
-
       } else {
-          // Patrol Logic
           if (Math.abs(zombie.vx) < 0.1) zombie.vx = Math.random() > 0.5 ? 1 : -1;
           targetVx = zombie.vx > 0 ? stats.speed * 0.5 : -stats.speed * 0.5;
-          
           if (zombie.x > zombie.patrolCenter + zombie.patrolRange) targetVx = -Math.abs(targetVx);
           if (zombie.x < zombie.patrolCenter - zombie.patrolRange) targetVx = Math.abs(targetVx);
-          
           zombie.facingRight = targetVx > 0;
       }
 
-      // Apply Separation & Movement
       zombie.vx = targetVx + sepVx;
 
-      // D. Environmental Sensing (Look Ahead)
+      // AI Sensing
       const lookAheadX = zombie.x + (zombie.facingRight ? zombie.w + 10 : -10);
-      const lookAheadY = zombie.y + zombie.h + 2; // Check floor
-      
+      const lookAheadY = zombie.y + zombie.h + 2; 
       let groundAhead = false;
       let wallAhead = false;
       
-      // Simple raycast against platforms
       for (const plat of platforms) {
-          // Check for ground
-          if (lookAheadX >= plat.x && lookAheadX <= plat.x + plat.w && Math.abs(lookAheadY - plat.y) < 20) {
-              groundAhead = true;
-          }
-          // Check for walls (Obstacles at head height)
+          if (lookAheadX >= plat.x && lookAheadX <= plat.x + plat.w && Math.abs(lookAheadY - plat.y) < 20) groundAhead = true;
           if (plat.type === 'obstacle' || plat.type === 'platform') {
-               const checkRect = { 
-                   x: lookAheadX, 
-                   y: zombie.y + 10, 
-                   w: 5, 
-                   h: zombie.h - 20 
-               };
+               const checkRect = { x: lookAheadX, y: zombie.y + 10, w: 5, h: zombie.h - 20 };
                if (checkCollision(checkRect, plat)) wallAhead = true;
           }
       }
 
-      // E. Decision Making (Jump / Turn)
       if (zombie.isGrounded) {
           if (zombie.aggro) {
-              // Smart Navigation
               let shouldJump = false;
-              
-              // 1. Jump over obstacles
               if (wallAhead && zombie.type !== ZombieType.TANK) shouldJump = true;
-              
-              // 2. Jump over gaps (Gap Crossing)
               if (!groundAhead && zombie.type !== ZombieType.TANK) {
                    shouldJump = true;
-                   // Lunge forward
                    zombie.vx *= 1.5; 
               }
-
-              // 3. Vertical Aggression (Player is above)
-              if (canSeePlayer && player.y < zombie.y - 60 && Math.abs(player.x - zombie.x) < 150) {
-                  shouldJump = true;
-              }
-
-              // 4. Jumper specific logic
+              if (canSeePlayer && player.y < zombie.y - 60 && Math.abs(player.x - zombie.x) < 150) shouldJump = true;
               if (zombie.type === ZombieType.JUMPER && player.y < zombie.y - 50) shouldJump = true;
-
               if (shouldJump) {
-                  zombie.vy = -13; // Standard Jump
+                  zombie.vy = -13; 
                   zombie.isGrounded = false;
               }
           } else {
-              // Patrolling: Turn at edges or walls
               if (!groundAhead || wallAhead) {
-                  zombie.vx *= -1; // Turn around
-                  // Shift slightly to prevent stuck loop
+                  zombie.vx *= -1; 
                   zombie.x += zombie.vx * 2;
               }
           }
       }
 
-      // F. Physics Integration
       zombie.vy += GRAVITY;
       zombie.x += zombie.vx;
       zombie.y += zombie.vy;
 
-      // G. Zombie-Platform Collision
       let zombieGrounded = false;
       for (const plat of platforms) {
         if (checkCollision(zombie, plat)) {
@@ -866,7 +767,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
              zombie.vy = 0;
              zombieGrounded = true;
           } else if (zombie.vx !== 0) {
-             // Hit wall - stop horizontal movement
              zombie.x -= zombie.vx; 
              zombie.vx = 0;
           }
@@ -874,7 +774,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
       }
       zombie.isGrounded = zombieGrounded;
 
-      // H. Combat Interactions
       state.current.projectiles.forEach(p => {
           if (p.life > 0 && checkCollision(p, zombie)) {
               zombie.health -= p.damage;
@@ -885,8 +784,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
               
               zombie.vx = knockback;
               zombie.vy = -2;
-              
-              // Alert on hit
               zombie.aggro = true;
               zombie.searchTimer = 180;
               zombie.lastKnownX = player.x;
@@ -899,28 +796,22 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
                   state.current.score += 100;
                   if (zombie.type === ZombieType.TANK) state.current.score += 400; 
                   if (zombie.type === ZombieType.SCREAMER) state.current.score += 200;
-                  onScoreUpdate(state.current.score);
                   spawnParticles(zombie.x + zombie.w/2, zombie.y + zombie.h/2, '#ef4444', 15);
+                  // Score is updated in state ref, but not synced to React to save performance
               }
           }
       });
 
-      // --- SOLID ZOMBIE COLLISION & DAMAGE ---
       if (checkCollision(player, zombie) && !zombie.isDead) {
-         
-         // SPECIAL: DASH KILL vs DASH BOUNCE
          if (player.isDashing) {
-             // BALANCE: TANKS REFLECT DASH
              if (zombie.type === ZombieType.TANK) {
                  player.isDashing = false;
-                 player.vx = player.facingRight ? -10 : 10; // Bounce back hard
+                 player.vx = player.facingRight ? -10 : 10; 
                  player.vy = -5;
                  spawnParticles(player.x + player.w/2, player.y + player.h/2, '#ffffff', 10);
-                 soundManager.playClang(); // Add clang sound method or re-use dry fire
-                 // Stun the tank slightly?
+                 soundManager.playClang(); 
                  zombie.vx = player.facingRight ? 5 : -5;
              } else {
-                 // Kill normal zombies
                  zombie.health -= 50; 
                  zombie.vx = player.facingRight ? 15 : -15;
                  zombie.vy = -5;
@@ -930,40 +821,27 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
                       zombie.isDead = true;
                       state.current.score += 100;
                       if (zombie.type === ZombieType.SCREAMER) state.current.score += 200;
-                      onScoreUpdate(state.current.score);
                  }
              }
          } else {
-             // 1. Calculate Overlap
              const playerCX = player.x + player.w/2;
              const zombieCX = zombie.x + zombie.w/2;
              const dx = playerCX - zombieCX;
-             
              const combinedHalfWidths = (player.w / 2) + (zombie.w / 2);
              const overlapX = combinedHalfWidths - Math.abs(dx);
              
-             // 2. Resolve Physics (Make them solid)
-             // Only push if there is significant overlap
              if (overlapX > 0 && overlapX < 30) {
-                 if (playerCX > zombieCX) {
-                     player.x += overlapX; // Push Player Right
-                 } else {
-                     player.x -= overlapX; // Push Player Left
-                 }
-                 
-                 // Kill momentum into the zombie
+                 if (playerCX > zombieCX) player.x += overlapX; 
+                 else player.x -= overlapX; 
                  player.vx = 0;
-                 
-                 // Also stop zombie to feel weight
                  zombie.vx = 0; 
              }
 
-             // 3. Apply Damage
              if (player.invincibleTimer === 0) {
                 player.health -= 1;
                 player.invincibleTimer = INVINCIBLE_FRAMES;
                 player.vy = -8;
-                player.vx = player.x < zombie.x ? -12 : 12; // Big knockback on damage
+                player.vx = player.x < zombie.x ? -12 : 12; 
                 spawnParticles(player.x + player.w/2, player.y + player.h/2, '#ef4444', 10);
                 soundManager.playDamage();
              }
@@ -973,10 +851,11 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
 
     if (player.health <= 0) {
       state.current.status = GameStatus.GAME_OVER;
+      // IMPORTANT: Update score on Game Over
+      onScoreUpdate(state.current.score);
       onStatusChange(GameStatus.GAME_OVER);
     }
 
-    // --- 9. Particles ---
     state.current.particles.forEach(p => {
       p.x += p.vx;
       p.y += p.vy;
@@ -986,14 +865,10 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
 
     const canvas = canvasRef.current;
     if (canvas) {
-        // Camera Follow Logic (Smooth)
-        const targetCamX = player.x - canvas.width / 3; // Keep player slightly left of center
+        const targetCamX = player.x - canvas.width / 3; 
         state.current.camera.x += (targetCamX - state.current.camera.x) * 0.1;
-        
         if (state.current.camera.x < 0) state.current.camera.x = 0;
         if (state.current.camera.x > WORLD_WIDTH - canvas.width) state.current.camera.x = WORLD_WIDTH - canvas.width;
-        
-        // Lock vertical camera
         state.current.camera.y = 0;
     }
 
@@ -1040,7 +915,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
 
     ctx.save();
     
-    // Dash visual effect
     if (isDashing) {
         ctx.shadowBlur = 20;
         ctx.shadowColor = '#06b6d4';
@@ -1048,20 +922,14 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
     }
 
     if (isSliding) {
-        // Draw Sliding Pose (Horizontal)
         const slideH = h / 2;
         const slideY = y + slideH;
-        
-        ctx.fillStyle = '#1f2937'; // Legs trailing
+        ctx.fillStyle = '#1f2937'; 
         ctx.fillRect(facingRight ? x : x + 20, slideY + 5, 20, 10);
-        
-        ctx.fillStyle = color; // Body
+        ctx.fillStyle = color; 
         ctx.fillRect(x + 5, slideY, 30, 20);
-        
-        ctx.fillStyle = '#fca5a5'; // Head
+        ctx.fillStyle = '#fca5a5'; 
         ctx.fillRect(facingRight ? x + 25 : x + 5, slideY - 5, 15, 15);
-        
-        // Motion lines
         ctx.strokeStyle = '#fff';
         ctx.beginPath();
         ctx.moveTo(facingRight ? x - 10 : x + w + 10, slideY + 10);
@@ -1069,63 +937,42 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
         ctx.stroke();
 
     } else if (isWallSliding) {
-        // Draw Wall Slide Pose (Clinging)
         const wallX = player.wallDir === 1 ? x + w - 10 : x;
-        
-        ctx.fillStyle = color; // Body
+        ctx.fillStyle = color; 
         ctx.fillRect(x + 5, y + 10, 30, 30);
-        
-        ctx.fillStyle = '#1f2937'; // Legs dangling
+        ctx.fillStyle = '#1f2937'; 
         ctx.fillRect(x + 10, y + 40, 8, 15);
         ctx.fillRect(x + 22, y + 35, 8, 15);
-
-        ctx.fillStyle = '#fca5a5'; // Head
+        ctx.fillStyle = '#fca5a5'; 
         ctx.fillRect(x + 10, y - 5, 20, 20);
-        
-        // Arm holding wall
         ctx.fillStyle = '#fca5a5';
         ctx.fillRect(player.wallDir === 1 ? x + 25 : x + 5, y + 15, 10, 5);
-        
-        // Dust particles for sliding
         if (Math.random() > 0.7) {
             ctx.fillStyle = '#ccc';
             ctx.fillRect(player.wallDir === 1 ? x + w : x, y + h, 4, 4);
         }
 
     } else {
-        // Standard Pose (Run/Idle)
-        // Legs
         ctx.fillStyle = '#1f2937'; 
-        // Animate legs based on VX
         const walkCycle = Math.sin(Date.now() / 100) * (Math.abs(player.vx) > 0.1 ? 5 : 0);
         ctx.fillRect(x + 8 + walkCycle, y + h - 20, 10, 20); 
         ctx.fillRect(x + 22 - walkCycle, y + h - 20, 10, 20); 
-
-        // Body
         ctx.fillStyle = color;
         ctx.fillRect(x + 5, y + 20, 30, 25);
-
-        // Head
         ctx.fillStyle = '#fca5a5'; 
         ctx.fillRect(x + 10, y, 20, 20);
         ctx.fillStyle = '#5c3a21'; 
         ctx.fillRect(x + 8, y - 2, 24, 6);
-        
-        // Eyes
         ctx.fillStyle = '#000';
         const eyeX = facingRight ? x + 24 : x + 12;
         ctx.fillRect(eyeX, y + 6, 4, 4);
-
-        // Arms & Weapon
         ctx.fillStyle = color;
         const armX = facingRight ? x + 20 : x + 10;
         const armY = y + 25;
         ctx.fillRect(armX, armY, 10, 8); 
-
         ctx.fillStyle = '#fca5a5';
         const handX = facingRight ? armX + 10 : armX - 10;
         ctx.fillRect(handX, armY + 2, 8, 4);
-
         const weaponX = facingRight ? handX + 10 : handX - 5;
         const weaponY = armY + 6;
         drawWeapon(ctx, player.weapons[player.currentWeaponIndex], weaponX, weaponY, facingRight);
@@ -1135,56 +982,41 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
   };
 
   const drawCollectible = (ctx: CanvasRenderingContext2D, item: Collectible) => {
-    // Hover animation
     const floatY = Math.sin(Date.now() / 300) * 5;
     const cy = item.y + item.h / 2 + floatY;
     const cx = item.x + item.w / 2;
 
     if (item.type === 'weapon' && item.weaponType) {
-        // Glowing Orb background
         const gradient = ctx.createRadialGradient(cx, cy, 5, cx, cy, 25);
-        gradient.addColorStop(0, 'rgba(59, 130, 246, 0.5)'); // Blue glow
+        gradient.addColorStop(0, 'rgba(59, 130, 246, 0.5)'); 
         gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
         ctx.fillStyle = gradient;
         ctx.beginPath();
         ctx.arc(cx, cy, 25, 0, Math.PI * 2);
         ctx.fill();
-
-        // Draw the weapon icon centered
         drawWeapon(ctx, item.weaponType, cx, cy, true, 1.5);
     } else if (item.type === 'ammo' && item.weaponType) {
-        // Ammo Box
-        ctx.fillStyle = '#10b981'; // Greenish box
+        ctx.fillStyle = '#10b981'; 
         ctx.fillRect(item.x, item.y + floatY, item.w, item.h);
-        
-        // Label 'A'
         ctx.fillStyle = '#064e3b';
         ctx.font = 'bold 12px monospace';
         ctx.textAlign = 'center';
         ctx.fillText('AMMO', cx, cy + 4);
         ctx.textAlign = 'left';
-
-        // Border
         ctx.strokeStyle = '#34d399';
         ctx.lineWidth = 1;
         ctx.strokeRect(item.x, item.y + floatY, item.w, item.h);
-
     } else if (item.type === 'medkit') {
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(item.x, item.y + floatY, item.w, item.h);
         ctx.fillStyle = '#ef4444';
-        // Cross
         ctx.fillRect(cx - 4, item.y + floatY + 5, 8, item.h - 10);
         ctx.fillRect(item.x + 5, cy - 4, item.w - 10, 8);
-        
-        // Border
         ctx.strokeStyle = '#d1d5db';
         ctx.lineWidth = 1;
         ctx.strokeRect(item.x, item.y + floatY, item.w, item.h);
     }
   };
-
-  // --- Render Loop ---
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -1194,21 +1026,18 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
 
     const { player, platforms, zombies, particles, projectiles, collectibles, camera, hordeWarningTimer } = state.current;
 
-    // Clear
     ctx.fillStyle = '#111827';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.save();
     ctx.translate(-Math.floor(camera.x), -Math.floor(camera.y));
 
-    // Background
     ctx.fillStyle = '#1f2937';
     for(let i=0; i<40; i++) { 
         const x = (i * 300) - (camera.x * 0.2); 
         ctx.fillRect(x, 100, 100, 1500);
     }
 
-    // Platforms
     platforms.forEach(plat => {
       if (plat.type === 'goal') {
         ctx.fillStyle = '#fbbf24';
@@ -1219,42 +1048,35 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
         ctx.fillStyle = '#374151';
         ctx.shadowBlur = 0;
         ctx.fillRect(plat.x, plat.y, plat.w, plat.h);
-        // Top detail
         ctx.fillStyle = '#4b5563';
         ctx.fillRect(plat.x, plat.y, plat.w, 10);
       } else {
         ctx.fillStyle = '#4b5563';
         ctx.shadowBlur = 0;
         ctx.fillRect(plat.x, plat.y, plat.w, plat.h);
-        // Bevel
         ctx.fillStyle = '#6b7280';
         ctx.fillRect(plat.x, plat.y, plat.w, 5);
       }
     });
 
-    // Collectibles
     collectibles.forEach(item => {
         if (!item.collected) {
             drawCollectible(ctx, item);
         }
     });
 
-    // Zombies
     zombies.forEach(z => {
       ctx.fillStyle = z.aggro ? '#ef4444' : z.color;
-      
       if (z.type === ZombieType.TANK) {
          ctx.fillRect(z.x, z.y, z.w, z.h);
          ctx.strokeStyle = '#000';
          ctx.lineWidth = 2;
          ctx.strokeRect(z.x, z.y, z.w, z.h);
-         // Tank details
          ctx.fillStyle = '#581c87';
          ctx.fillRect(z.x + 5, z.y + 10, z.w - 10, 10);
       } else if (z.type === ZombieType.SCREAMER) {
-         // Screamer visual
          ctx.fillRect(z.x, z.y, z.w, z.h);
-         if (z.aggro && z.attackTimer > 550) { // Screaming animation (first 50 frames of cooldown)
+         if (z.aggro && z.attackTimer > 550) { 
              ctx.fillStyle = '#fff';
              const mouthW = 10 + Math.random() * 5;
              const mouthX = z.facingRight ? z.x + z.w - 5 : z.x - 5;
@@ -1265,26 +1087,20 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
       } else {
          ctx.fillRect(z.x, z.y, z.w, z.h);
       }
-      
-      // Face
       ctx.fillStyle = 'black';
       const eyeOffset = z.facingRight ? z.w - 10 : 2;
       ctx.fillRect(z.x + eyeOffset, z.y + 10, 8, 8);
-      
-      // Health bar
       ctx.fillStyle = 'red';
       ctx.fillRect(z.x, z.y - 10, z.w, 4);
       ctx.fillStyle = 'lime';
       ctx.fillRect(z.x, z.y - 10, z.w * (z.health / z.maxHealth), 4);
     });
 
-    // Projectiles
     projectiles.forEach(p => {
         ctx.fillStyle = p.color;
         ctx.fillRect(p.x, p.y, p.w, p.h);
     });
 
-    // Particles
     particles.forEach(p => {
       ctx.globalAlpha = p.life;
       ctx.fillStyle = p.color;
@@ -1294,29 +1110,23 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
       ctx.globalAlpha = 1.0;
     });
 
-    // Player
     if (player.invincibleTimer % 4 < 2) {
         drawPlayer(ctx, player);
     }
     
-    // Dash/Reload Indicator on Player
     if (player.isReloading) {
         ctx.fillStyle = '#fbbf24';
         ctx.font = 'bold 12px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText('RELOADING...', player.x + player.w / 2, player.y - 20);
-        
-        // Progress Bar
         const maxTime = WEAPONS[player.weapons[player.currentWeaponIndex]].reloadDuration;
         const progress = 1 - (player.reloadTimer / maxTime);
-        
         ctx.fillStyle = '#374151';
         ctx.fillRect(player.x - 10, player.y - 15, player.w + 20, 4);
         ctx.fillStyle = '#fbbf24';
         ctx.fillRect(player.x - 10, player.y - 15, (player.w + 20) * progress, 4);
         ctx.textAlign = 'left';
     } else if (player.dashCooldown > 0) {
-        // Dash Cooldown bar
         const progress = 1 - (player.dashCooldown / DASH_COOLDOWN);
         ctx.fillStyle = '#164e63';
         ctx.fillRect(player.x - 10, player.y - 10, player.w + 20, 3);
@@ -1326,16 +1136,13 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
 
     ctx.restore();
     
-    // --- UI OVERLAY ELEMENTS (HUD is separate, but Warning Text is part of Canvas draw) ---
-    
     if (hordeWarningTimer > 0) {
         ctx.save();
-        ctx.fillStyle = 'rgba(220, 38, 38, 0.2)'; // Red overlay
+        ctx.fillStyle = 'rgba(220, 38, 38, 0.2)'; 
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
-        // Flashing Text
         if (Math.floor(Date.now() / 200) % 2 === 0) {
-            ctx.fillStyle = '#ef4444'; // Red-500
+            ctx.fillStyle = '#ef4444'; 
             ctx.shadowColor = 'black';
             ctx.shadowBlur = 10;
             ctx.font = '900 48px sans-serif';
@@ -1360,14 +1167,12 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
       
       const { player, score } = state.current;
       
-      // HUD Background
       ctx.fillStyle = 'rgba(17, 24, 39, 0.8)';
       ctx.fillRect(10, 10, 360, 110);
       ctx.strokeStyle = '#4b5563';
       ctx.lineWidth = 2;
       ctx.strokeRect(10, 10, 360, 110);
       
-      // Hearts (Lives)
       ctx.font = 'bold 16px sans-serif';
       ctx.fillStyle = '#9ca3af';
       ctx.fillText('HEALTH', 25, 35);
@@ -1380,7 +1185,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
           ctx.fill();
       }
 
-      // Inventory: Weapons
       ctx.fillStyle = '#9ca3af';
       ctx.fillText('WEAPONS', 25, 70);
       
@@ -1388,18 +1192,15 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
           const isActive = index === player.currentWeaponIndex;
           const wx = 100 + (index * 70);
           
-          // Slot box
-          ctx.fillStyle = isActive ? '#1e3a8a' : '#374151'; // Blue for active
+          ctx.fillStyle = isActive ? '#1e3a8a' : '#374151'; 
           ctx.fillRect(wx, 50, 60, 30);
           if (isActive) {
             ctx.strokeStyle = '#60a5fa';
             ctx.strokeRect(wx, 50, 60, 30);
           }
 
-          // Draw weapon icon centered in slot
           drawWeapon(ctx, w, wx + 30, 65, true, 1.2);
 
-          // PERSISTENT AMMO COUNTER
           const clip = player.ammoClip[w];
           const reserve = player.ammoReserve[w];
           const isInfinite = w === WeaponType.PISTOL;
@@ -1410,37 +1211,31 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
           ctx.textAlign = 'right';
           
           if (isInfinite) {
-             ctx.fillStyle = '#9ca3af'; // Gray for infinity
+             ctx.fillStyle = '#9ca3af'; 
              ctx.fillText('∞', wx + 55, 60);
           } else {
-             // Flash red if completely empty or clip empty
              if (isEmpty) {
                  const flash = Math.floor(Date.now() / 300) % 2 === 0;
                  ctx.fillStyle = flash ? '#ef4444' : '#7f1d1d'; 
              } else if (isClipEmpty) {
                  const flash = Math.floor(Date.now() / 300) % 2 === 0;
-                 ctx.fillStyle = flash ? '#f59e0b' : '#d97706'; // Orange warning for reload
+                 ctx.fillStyle = flash ? '#f59e0b' : '#d97706'; 
              } else {
                  ctx.fillStyle = isActive ? '#ffffff' : '#d1d5db';
              }
-             
-             // Format: Clip / Reserve
              ctx.fillText(`${clip}/${reserve}`, wx + 58, 75); 
           }
           ctx.textAlign = 'left';
 
-          // Active Weapon Name (Below slot)
           if (isActive) {
              ctx.fillStyle = '#ffffff';
              ctx.font = '10px monospace';
              ctx.textAlign = 'center';
-             // Draw Name only
              ctx.fillText(WEAPONS[w].name.substring(0, 3), wx + 30, 95);
              ctx.textAlign = 'left';
           }
       });
 
-      // Inventory: Medkits
       ctx.fillStyle = '#9ca3af';
       ctx.fillText('ITEM', 250, 70);
       
@@ -1449,13 +1244,12 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
       
       if (player.medkits > 0) {
           ctx.fillStyle = '#ef4444'; 
-          ctx.fillRect(258, 54, 14, 22); // Box
+          ctx.fillRect(258, 54, 14, 22); 
           ctx.fillStyle = '#ffffff';
-          ctx.fillRect(263, 56, 4, 18); // Cross vert
-          ctx.fillRect(260, 63, 10, 4); // Cross horz
+          ctx.fillRect(263, 56, 4, 18); 
+          ctx.fillRect(260, 63, 10, 4); 
       }
 
-      // Score
       ctx.fillStyle = '#fbbf24';
       ctx.textAlign = 'right';
       ctx.font = 'bold 24px monospace';
@@ -1489,7 +1283,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
   useEffect(() => {
     if (gameStatus === GameStatus.PLAYING) {
         if (state.current.status !== GameStatus.PLAYING) {
-             // Only init if starting a new game, not when resuming from pause
              if (state.current.status === GameStatus.MENU || state.current.status === GameStatus.GAME_OVER || state.current.status === GameStatus.VICTORY) {
                 initGame();
             }
@@ -1505,7 +1298,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
     return () => cancelAnimationFrame(requestRef.current);
   }, [gameStatus, tick, initGame, drawWithHUD]);
 
-  // Pause Key Listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key.toLowerCase() === 'p') {
@@ -1521,7 +1313,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [gameStatus, onStatusChange]);
 
-  // Input Listeners
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => { 
         keys.current[e.key.toLowerCase()] = true; 
@@ -1537,24 +1328,26 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
     };
   }, []);
 
-  // Resize Handler
   useEffect(() => {
     const handleResize = () => {
         if (canvasRef.current) {
             canvasRef.current.width = window.innerWidth;
             canvasRef.current.height = window.innerHeight;
-            drawWithHUD(); 
+            // Immediate redraw to avoid flickering
+            const ctx = canvasRef.current.getContext('2d');
+            if(ctx) {
+                 // Minimal redraw if needed, or wait for next tick.
+                 // We call drawWithHUD to ensure screen isn't empty if paused.
+            }
         }
     };
     window.addEventListener('resize', handleResize);
     handleResize();
     return () => window.removeEventListener('resize', handleResize);
-  }, [drawWithHUD]);
+  }, []); // Remove dependency on drawWithHUD to prevent loop, logic is moved
 
-
-  // Touch Control Handlers
   const handleTouch = (key: string, pressed: boolean) => (e: React.TouchEvent | React.MouseEvent) => {
-    e.preventDefault(); // Prevent default browser actions like zooming/scrolling
+    e.preventDefault(); 
     if (state.current.status === GameStatus.PLAYING) {
         keys.current[key] = pressed;
     }
@@ -1570,7 +1363,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
       }
   };
   
-  // Joystick Logic
   const handleJoystickTouch = (e: React.TouchEvent) => {
     e.preventDefault();
     if (state.current.status !== GameStatus.PLAYING) return;
@@ -1583,7 +1375,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
     
-    // Calculate relative touch position inside the joystick container
     const touchX = touch.clientX - rect.left;
     const touchY = touch.clientY - rect.top;
     
@@ -1591,7 +1382,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
     const dy = touchY - centerY;
     
     const distance = Math.sqrt(dx*dx + dy*dy);
-    const maxRadius = 30; // Max visual distance of knob
+    const maxRadius = 30; 
     
     let clampedX = dx;
     let clampedY = dy;
@@ -1602,15 +1393,13 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
         clampedY = dy * ratio;
     }
     
-    // Update Knob Visual
     if (joystickKnobRef.current) {
         joystickKnobRef.current.style.transform = `translate(${clampedX}px, ${clampedY}px)`;
     }
     
-    // Map to Keys (Threshold of 10 for deadzone)
     keys.current['arrowleft'] = clampedX < -10;
     keys.current['arrowright'] = clampedX > 10;
-    keys.current['arrowdown'] = clampedY > 15; // Slide logic
+    keys.current['arrowdown'] = clampedY > 15; 
   };
   
   const handleJoystickEnd = (e: React.TouchEvent) => {
@@ -1627,10 +1416,8 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
     <div className="relative w-full h-full" style={{ touchAction: 'none' }}>
       <canvas ref={canvasRef} className="block w-full h-full" />
       
-      {/* Mobile Controls Overlay - Visible on touch devices or small screens */}
       {(isMobile || window.innerWidth < 1024) && gameStatus === GameStatus.PLAYING && (
           <>
-            {/* Top Right Utils (Row) */}
             <div className="absolute top-4 right-4 flex gap-4">
                 <button 
                   className="w-10 h-10 bg-gray-700/80 rounded border border-gray-400 flex items-center justify-center text-white text-xs font-bold"
@@ -1658,7 +1445,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
                 </button>
             </div>
 
-            {/* Bottom Left: Analog Joystick */}
             <div 
                 ref={joystickBaseRef}
                 className="absolute bottom-8 left-8 w-32 h-32 bg-gray-800/50 rounded-full border-2 border-gray-500 flex items-center justify-center backdrop-blur-sm touch-none"
@@ -1673,9 +1459,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
                 ></div>
             </div>
 
-            {/* Bottom Right: Action Cluster (Ergonomic Arc) */}
             <div className="absolute bottom-6 right-6 w-48 h-48 pointer-events-none">
-                 {/* Shoot (Left) */}
                  <button 
                    className="absolute bottom-4 left-0 w-16 h-16 bg-red-600/80 rounded-full border-2 border-white active:bg-red-400 text-white font-bold text-xs flex items-center justify-center shadow-lg pointer-events-auto"
                    onTouchStart={handleTouch('x', true)} onTouchEnd={handleTouch('x', false)}
@@ -1683,7 +1467,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
                     FIRE
                 </button>
                 
-                {/* Jump (Main - Bottom Right) */}
                 <button 
                    className="absolute bottom-0 right-0 w-20 h-20 bg-blue-600/80 rounded-full border-2 border-white active:bg-blue-400 text-white font-bold text-sm flex items-center justify-center shadow-xl pointer-events-auto"
                    onTouchStart={handleTouch('z', true)} onTouchEnd={handleTouch('z', false)}
@@ -1691,7 +1474,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
                     JUMP
                 </button>
 
-                {/* Dash (Top) */}
                 <button 
                    className="absolute top-4 right-8 w-14 h-14 bg-cyan-600/80 rounded-full border-2 border-white active:bg-cyan-400 text-white font-bold text-xs flex items-center justify-center shadow-lg pointer-events-auto"
                    onTouchStart={handleTouch(' ', true)} onTouchEnd={handleTouch(' ', false)}

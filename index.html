@@ -6,14 +6,21 @@
     <title>Zombie Run: Dead City</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-      body {
+      html, body {
+        height: 100%;
+        width: 100%;
         margin: 0;
+        padding: 0;
         overflow: hidden;
-        background-color: #1a202c; /* gray-900 */
+        background-color: #111827; /* gray-900 */
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        touch-action: none; /* Disables browser handling of gestures */
+        touch-action: none;
         -webkit-user-select: none;
         user-select: none;
+      }
+      #root {
+        height: 100%;
+        width: 100%;
       }
       canvas {
         display: block;
@@ -31,5 +38,6 @@
 </head>
   <body>
     <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
   </body>
 </html>
