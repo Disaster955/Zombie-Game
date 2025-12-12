@@ -1,4 +1,4 @@
-import { Platform, WeaponType, Collectible, ZombieType } from './types';
+import { Platform, WeaponType, Collectible, ZombieType, Difficulty } from './types';
 
 // Physics & Movement
 export const GRAVITY = 0.8; // Increased for snappier jumps
@@ -29,11 +29,40 @@ export const DASH_COOLDOWN = 90; // 1.5 Seconds cooldown
 export const PLAYER_WIDTH = 40;
 export const PLAYER_HEIGHT = 60;
 export const INVINCIBLE_FRAMES = 90; 
-export const MAX_HEALTH = 3; 
 export const MAX_WEAPONS = 2;
 export const MAX_MEDKITS = 1;
 export const HORDE_INTERVAL = 3600; // 60 seconds at 60fps
 export const HORDE_WARNING_DURATION = 180; // 3 seconds
+
+// --- DIFFICULTY BALANCING ---
+export const DIFFICULTY_SETTINGS = {
+  [Difficulty.EASY]: {
+    playerHealth: 5,
+    ammoMultiplier: 2.0, // Double ammo pickups
+    zombieSpeedMultiplier: 0.7, // Slower zombies
+    zombieHealthMultiplier: 0.7, // Weaker zombies
+    scoreMultiplier: 0.5, // Less score
+    medkitDropChance: 0.3
+  },
+  [Difficulty.NORMAL]: {
+    playerHealth: 3,
+    ammoMultiplier: 1.0,
+    zombieSpeedMultiplier: 1.0,
+    zombieHealthMultiplier: 1.0,
+    scoreMultiplier: 1.0,
+    medkitDropChance: 0.1
+  },
+  [Difficulty.HARD]: {
+    playerHealth: 2, // Die in 2 hits
+    ammoMultiplier: 0.6, // Scarce ammo
+    zombieSpeedMultiplier: 1.3, // Fast zombies
+    zombieHealthMultiplier: 1.4, // Tanky zombies
+    scoreMultiplier: 2.0, // Double score
+    medkitDropChance: 0.05
+  }
+};
+// Default fallback
+export const MAX_HEALTH = 3; 
 
 // Zombie Stats
 export const ZOMBIE_STATS = {

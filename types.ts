@@ -6,6 +6,12 @@ export enum GameStatus {
   VICTORY = 'VICTORY'
 }
 
+export enum Difficulty {
+  EASY = 'EASY',
+  NORMAL = 'NORMAL',
+  HARD = 'HARD'
+}
+
 export interface Rect {
   x: number;
   y: number;
@@ -123,6 +129,7 @@ export interface GameState {
   camera: { x: number; y: number };
   score: number;
   status: GameStatus;
+  difficulty: Difficulty;
   
   // Horde System
   hordeTimer: number;        // Countdown to next horde

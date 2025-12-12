@@ -1,12 +1,14 @@
 import React, { useState, useCallback } from 'react';
 import GameCanvas from './components/GameCanvas';
 import UIOverlay from './components/UIOverlay';
-import { GameStatus } from './types';
+import { GameStatus, Difficulty } from './types';
 import { soundManager } from './utils/sound';
 
 const App: React.FC = () => {
   const [gameStatus, setGameStatus] = useState<GameStatus>(GameStatus.MENU);
   const [score, setScore] = useState(0);
+  const [difficulty, setDifficulty] = useState<Difficulty>(Difficulty.NORMAL);
+  const [gameKey, setGameKey] = useState(0);
 
   const handleStart = () => {
     soundManager.init(); // Initialize audio context on user gesture
@@ -16,6 +18,7 @@ const App: React.FC = () => {
 
   const handleRestart = () => {
     soundManager.init();
+    setGameKey(prev => prev + 1); // Force re-mount of GameCanvas
     setGameStatus(GameStatus.PLAYING);
     setScore(0);
   };
@@ -31,9 +34,11 @@ const App: React.FC = () => {
   return (
     <div className="relative w-screen h-screen bg-gray-900 overflow-hidden select-none">
       <GameCanvas 
+        key={gameKey}
         gameStatus={gameStatus} 
         onScoreUpdate={setScore} 
         onStatusChange={handleStatusChange} 
+        difficulty={difficulty}
       />
       <UIOverlay 
         status={gameStatus} 
@@ -41,11 +46,13 @@ const App: React.FC = () => {
         onStart={handleStart} 
         onRestart={handleRestart}
         onResume={handleResume} 
+        difficulty={difficulty}
+        onSelectDifficulty={setDifficulty}
       />
       
       {/* Mobile Controls Hint */}
       <div className="absolute bottom-4 left-4 text-gray-500 text-xs hidden md:block">
-        v1.6.0 (AI Update) | Controls: Arrows(Move) Z(Jump) X(Shoot) C(Swap) V(Heal) P(Pause)
+        v1.7.0 (Modes Update) | Controls: Arrows(Move) Z(Jump) X(Shoot) C(Swap) V(Heal) P(Pause)
       </div>
     </div>
   );

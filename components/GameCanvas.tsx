@@ -6,7 +6,8 @@ import {
   Rect,
   WeaponType,
   Collectible,
-  ZombieType
+  ZombieType,
+  Difficulty
 } from '../types';
 import { 
   GRAVITY, 
@@ -39,7 +40,8 @@ import {
   HORDE_WARNING_DURATION,
   DASH_SPEED,
   DASH_DURATION,
-  DASH_COOLDOWN
+  DASH_COOLDOWN,
+  DIFFICULTY_SETTINGS
 } from '../constants';
 import { soundManager } from '../utils/sound';
 
@@ -47,9 +49,10 @@ interface GameCanvasProps {
   onScoreUpdate: (score: number) => void;
   onStatusChange: (status: GameStatus) => void;
   gameStatus: GameStatus;
+  difficulty: Difficulty;
 }
 
-const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, gameStatus }) => {
+const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, gameStatus, difficulty }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const requestRef = useRef<number>(0);
   
@@ -156,6 +159,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
     camera: { x: 0, y: 0 },
     score: 0,
     status: GameStatus.MENU,
+    difficulty: Difficulty.NORMAL,
     hordeTimer: HORDE_INTERVAL,
     hordeWarningTimer: 0
   });
@@ -173,10 +177,16 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
   // --- Initialization ---
 
   const initGame = useCallback(() => {
+    const settings = DIFFICULTY_SETTINGS[difficulty];
+    const playerMaxHealth = settings.playerHealth;
+    const ammoMult = settings.ammoMultiplier;
+    
+    state.current.difficulty = difficulty;
+
     state.current.player = {
       x: 100, y: FLOOR_Y - 100, w: PLAYER_WIDTH, h: PLAYER_HEIGHT, vx: 0, vy: 0,
       color: '#3b82f6', isGrounded: false, facingRight: true,
-      health: MAX_HEALTH, maxHealth: MAX_HEALTH, isDead: false,
+      health: playerMaxHealth, maxHealth: playerMaxHealth, isDead: false,
       isAttacking: false, attackCooldown: 0, invincibleTimer: 0,
       jumpsRemaining: MAX_JUMPS,
       isSliding: false, slideTimer: 0, isWallSliding: false, wallDir: 0,
@@ -191,8 +201,8 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
       },
       ammoReserve: {
          [WeaponType.PISTOL]: WEAPONS[WeaponType.PISTOL].startAmmo,
-         [WeaponType.SMG]: WEAPONS[WeaponType.SMG].startAmmo,
-         [WeaponType.SHOTGUN]: WEAPONS[WeaponType.SHOTGUN].startAmmo,
+         [WeaponType.SMG]: Math.floor(WEAPONS[WeaponType.SMG].startAmmo * ammoMult),
+         [WeaponType.SHOTGUN]: Math.floor(WEAPONS[WeaponType.SHOTGUN].startAmmo * ammoMult),
       },
       isReloading: false,
       reloadTimer: 0,
@@ -211,8 +221,8 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
             color: stats.color,
             isGrounded: false,
             facingRight: Math.random() > 0.5,
-            health: stats.health,
-            maxHealth: stats.health,
+            health: stats.health * settings.zombieHealthMultiplier,
+            maxHealth: stats.health * settings.zombieHealthMultiplier,
             isDead: false,
             patrolCenter: spawn.x,
             patrolRange: 150,
@@ -234,7 +244,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
     state.current.hordeWarningTimer = 0;
     
     onScoreUpdate(0);
-  }, [onScoreUpdate]);
+  }, [onScoreUpdate, difficulty]);
 
   // --- Physics Helpers ---
 
@@ -264,7 +274,8 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
       const type = Math.random() > 0.7 ? ZombieType.RUNNER : ZombieType.WALKER;
       const stats = ZOMBIE_STATS[type];
       const offsetX = Math.random() > 0.5 ? 100 : -100;
-      
+      const settings = DIFFICULTY_SETTINGS[state.current.difficulty];
+
       state.current.zombies.push({
         x: targetX + offsetX,
         y: targetY - 100, // Drop from sky
@@ -275,8 +286,8 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
         color: stats.color,
         isGrounded: false,
         facingRight: offsetX < 0,
-        health: stats.health,
-        maxHealth: stats.health,
+        health: stats.health * settings.zombieHealthMultiplier,
+        maxHealth: stats.health * settings.zombieHealthMultiplier,
         isDead: false,
         patrolCenter: targetX,
         patrolRange: 200,
@@ -296,7 +307,8 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
       const count = isMini ? 3 : 8;
       const { player, camera } = state.current;
       const screenWidth = window.innerWidth;
-      
+      const settings = DIFFICULTY_SETTINGS[state.current.difficulty];
+
       // Calculate scaled screen width for spawn logic
       const logicalWidth = screenWidth / scaleRef.current;
       
@@ -320,8 +332,8 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
             color: stats.color,
             isGrounded: false,
             facingRight: spawnX < player.x,
-            health: stats.health,
-            maxHealth: stats.health,
+            health: stats.health * settings.zombieHealthMultiplier,
+            maxHealth: stats.health * settings.zombieHealthMultiplier,
             isDead: false,
             patrolCenter: spawnX,
             patrolRange: 200,
@@ -344,6 +356,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
     const { player, platforms, zombies, projectiles, collectibles } = state.current;
     const currentWeaponType = player.weapons[player.currentWeaponIndex];
     const weaponStats = WEAPONS[currentWeaponType];
+    const settings = DIFFICULTY_SETTINGS[state.current.difficulty];
 
     // --- HORDE LOGIC ---
     if (state.current.hordeTimer > 0) {
@@ -655,14 +668,15 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
             } else if (item.type === 'weapon' && item.weaponType) {
                 const hasWeapon = player.weapons.includes(item.weaponType);
                 const wStats = WEAPONS[item.weaponType];
+                const pickupAmount = Math.floor(wStats.pickupAmmo * settings.ammoMultiplier);
 
                 if (hasWeapon) {
-                    player.ammoReserve[item.weaponType] = Math.min(player.ammoReserve[item.weaponType] + wStats.pickupAmmo, wStats.maxAmmo);
-                    state.current.score += 25;
+                    player.ammoReserve[item.weaponType] = Math.min(player.ammoReserve[item.weaponType] + pickupAmount, wStats.maxAmmo);
+                    state.current.score += 25 * settings.scoreMultiplier;
                     collected = true;
                     soundManager.playCollect();
                 } else {
-                    player.ammoReserve[item.weaponType] = Math.min(player.ammoReserve[item.weaponType] + wStats.pickupAmmo, wStats.maxAmmo);
+                    player.ammoReserve[item.weaponType] = Math.min(player.ammoReserve[item.weaponType] + pickupAmount, wStats.maxAmmo);
                     player.ammoClip[item.weaponType] = wStats.clipSize; 
 
                     if (player.weapons.length < MAX_WEAPONS) {
@@ -676,12 +690,13 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
 
                     collected = true;
                     spawnParticles(player.x + player.w/2, player.y, '#fbbf24', 15);
-                    state.current.score += 50;
+                    state.current.score += 50 * settings.scoreMultiplier;
                     soundManager.playCollect();
                 }
             } else if (item.type === 'ammo' && item.weaponType) {
                 const wStats = WEAPONS[item.weaponType];
-                player.ammoReserve[item.weaponType] = Math.min(player.ammoReserve[item.weaponType] + wStats.pickupAmmo, wStats.maxAmmo);
+                const pickupAmount = Math.floor(wStats.pickupAmmo * settings.ammoMultiplier);
+                player.ammoReserve[item.weaponType] = Math.min(player.ammoReserve[item.weaponType] + pickupAmount, wStats.maxAmmo);
                 collected = true;
                 soundManager.playCollect();
                 spawnParticles(player.x + player.w/2, player.y, '#10b981', 8);
@@ -751,7 +766,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
           if (!canSeePlayer && Math.abs(targetX - zombie.x) < 10) {
               targetVx = 0;
           } else {
-              targetVx = dir * stats.speed;
+              targetVx = dir * stats.speed * settings.zombieSpeedMultiplier;
               zombie.facingRight = dir > 0;
           }
       } else {
@@ -838,9 +853,10 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
 
               if (zombie.health <= 0) {
                   zombie.isDead = true;
-                  state.current.score += 100;
-                  if (zombie.type === ZombieType.TANK) state.current.score += 400; 
-                  if (zombie.type === ZombieType.SCREAMER) state.current.score += 200;
+                  let points = 100;
+                  if (zombie.type === ZombieType.TANK) points = 400; 
+                  if (zombie.type === ZombieType.SCREAMER) points = 200;
+                  state.current.score += points * settings.scoreMultiplier;
                   spawnParticles(zombie.x + zombie.w/2, zombie.y + zombie.h/2, '#ef4444', 15);
                   // Score is updated in state ref, but not synced to React to save performance
               }
@@ -864,8 +880,9 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
                  soundManager.playZombieHit();
                  if (zombie.health <= 0) {
                       zombie.isDead = true;
-                      state.current.score += 100;
-                      if (zombie.type === ZombieType.SCREAMER) state.current.score += 200;
+                      let points = 100;
+                      if (zombie.type === ZombieType.SCREAMER) points = 200;
+                      state.current.score += points * settings.scoreMultiplier;
                  }
              }
          } else {
@@ -926,7 +943,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
         state.current.camera.y = 0; // We keep it at 0 because scaling handles the fit
     }
 
-  }, [onScoreUpdate, onStatusChange]);
+  }, [onScoreUpdate, onStatusChange, difficulty]);
 
   // --- Visual Helpers ---
   
@@ -1223,7 +1240,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
         ctx.restore();
     }
 
-  }, []);
+  }, [difficulty]);
 
   const drawWithHUD = useCallback(() => {
       draw();
@@ -1255,6 +1272,9 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
       ctx.fillText('HEALTH', 25, 35);
       
       for(let i=0; i<MAX_HEALTH; i++) {
+          // If health is greater than base max, show extra in gold or just show up to current max
+          if (i >= player.maxHealth) break; 
+
           ctx.fillStyle = i < player.health ? '#ef4444' : '#374151';
           const hx = 90 + (i * 25);
           ctx.beginPath();
@@ -1362,6 +1382,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
   useEffect(() => {
     if (gameStatus === GameStatus.PLAYING) {
         if (state.current.status !== GameStatus.PLAYING) {
+             // Reset logic checks if we are coming from menu or restart
              if (state.current.status === GameStatus.MENU || state.current.status === GameStatus.GAME_OVER || state.current.status === GameStatus.VICTORY) {
                 initGame();
             }
@@ -1498,30 +1519,30 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
           <div className="fixed inset-0 z-50 pointer-events-none select-none">
             
             {/* Top Right Utils - Reduced size for phone */}
-            <div className="absolute top-4 right-4 flex gap-2 pointer-events-auto">
+            <div className="absolute top-4 right-4 flex gap-4 pointer-events-auto">
                 <button 
-                  className="w-8 h-8 bg-gray-700/80 active:bg-gray-600 backdrop-blur-md rounded-full border border-gray-400 flex items-center justify-center text-white text-[8px] font-bold shadow-lg"
+                  className="w-12 h-12 bg-gray-700/80 active:bg-gray-600 backdrop-blur-md rounded-full border border-gray-400 flex items-center justify-center text-white text-xs font-bold shadow-lg"
                   onTouchStart={handleTouch('r', true)} onTouchEnd={handleTouch('r', false)}
                   style={{ touchAction: 'none' }}
                 >
                     R
                 </button>
                 <button 
-                  className="w-8 h-8 bg-gray-700/80 active:bg-gray-600 backdrop-blur-md rounded-full border border-gray-400 flex items-center justify-center text-white text-[8px] font-bold shadow-lg"
+                  className="w-12 h-12 bg-gray-700/80 active:bg-gray-600 backdrop-blur-md rounded-full border border-gray-400 flex items-center justify-center text-white text-xs font-bold shadow-lg"
                   onTouchStart={handleTouch('c', true)} onTouchEnd={handleTouch('c', false)}
                   style={{ touchAction: 'none' }}
                 >
                     SWAP
                 </button>
                 <button 
-                  className="w-8 h-8 bg-red-900/80 active:bg-red-800 backdrop-blur-md rounded-full border border-red-400 flex items-center justify-center text-white text-sm font-bold shadow-lg"
+                  className="w-12 h-12 bg-red-900/80 active:bg-red-800 backdrop-blur-md rounded-full border border-red-400 flex items-center justify-center text-white text-lg font-bold shadow-lg"
                   onTouchStart={handleTouch('v', true)} onTouchEnd={handleTouch('v', false)}
                   style={{ touchAction: 'none' }}
                 >
                     +
                 </button>
                 <button 
-                   className="w-8 h-8 bg-yellow-600/80 active:bg-yellow-500 backdrop-blur-md rounded-full border border-yellow-400 flex items-center justify-center text-white font-bold text-[8px] shadow-lg"
+                   className="w-12 h-12 bg-yellow-600/80 active:bg-yellow-500 backdrop-blur-md rounded-full border border-yellow-400 flex items-center justify-center text-white font-bold text-xs shadow-lg"
                    onTouchStart={handlePause}
                    style={{ touchAction: 'none' }}
                 >
@@ -1529,10 +1550,10 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
                 </button>
             </div>
 
-            {/* Bottom Left: Enhanced Analog Joystick - Smaller */}
+            {/* Bottom Left: Enhanced Analog Joystick - Larger */}
             <div 
                 ref={joystickBaseRef}
-                className="absolute bottom-6 left-6 w-28 h-28 bg-gray-800/60 rounded-full border-2 border-gray-400 flex items-center justify-center backdrop-blur-md pointer-events-auto shadow-2xl"
+                className="absolute bottom-10 left-10 w-40 h-40 bg-gray-800/60 rounded-full border-2 border-gray-400 flex items-center justify-center backdrop-blur-md pointer-events-auto shadow-2xl"
                 onTouchStart={handleJoystickTouch}
                 onTouchMove={handleJoystickTouch}
                 onTouchEnd={handleJoystickEnd}
@@ -1544,16 +1565,16 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
                 
                 <div 
                     ref={joystickKnobRef}
-                    className="w-10 h-10 bg-white rounded-full shadow-xl pointer-events-none border-2 border-gray-300"
+                    className="w-14 h-14 bg-white rounded-full shadow-xl pointer-events-none border-2 border-gray-300"
                     style={{ transform: 'translate(0px, 0px)', transition: 'transform 0.05s linear' }}
                 ></div>
             </div>
 
-            {/* Bottom Right: Action Cluster (Ergonomic Arc) - Smaller */}
-            <div className="absolute bottom-4 right-4 w-48 h-48 pointer-events-none">
+            {/* Bottom Right: Action Cluster (Ergonomic Arc) - Larger */}
+            <div className="absolute bottom-4 right-4 w-64 h-64 pointer-events-none">
                  {/* Shoot (Left) */}
                  <button 
-                   className="absolute bottom-4 left-1 w-14 h-14 bg-red-600/80 rounded-full border-2 border-white active:bg-red-500 active:scale-95 transition-transform text-white font-bold text-[9px] flex items-center justify-center shadow-xl backdrop-blur-sm pointer-events-auto"
+                   className="absolute bottom-6 left-2 w-20 h-20 bg-red-600/80 rounded-full border-2 border-white active:bg-red-500 active:scale-95 transition-transform text-white font-bold text-xs flex items-center justify-center shadow-xl backdrop-blur-sm pointer-events-auto"
                    onTouchStart={handleTouch('x', true)} onTouchEnd={handleTouch('x', false)}
                    style={{ touchAction: 'none' }}
                 >
@@ -1562,7 +1583,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
                 
                 {/* Jump (Main - Bottom Right) */}
                 <button 
-                   className="absolute bottom-0 right-0 w-16 h-16 bg-blue-600/80 rounded-full border-2 border-white active:bg-blue-500 active:scale-95 transition-transform text-white font-bold text-[10px] flex items-center justify-center shadow-xl backdrop-blur-sm pointer-events-auto"
+                   className="absolute bottom-0 right-0 w-24 h-24 bg-blue-600/80 rounded-full border-2 border-white active:bg-blue-500 active:scale-95 transition-transform text-white font-bold text-sm flex items-center justify-center shadow-xl backdrop-blur-sm pointer-events-auto"
                    onTouchStart={handleTouch('z', true)} onTouchEnd={handleTouch('z', false)}
                    style={{ touchAction: 'none' }}
                 >
@@ -1571,7 +1592,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
 
                 {/* Dash (Top) */}
                 <button 
-                   className="absolute top-6 right-8 w-12 h-12 bg-cyan-600/80 rounded-full border-2 border-white active:bg-cyan-500 active:scale-95 transition-transform text-white font-bold text-[9px] flex items-center justify-center shadow-xl backdrop-blur-sm pointer-events-auto"
+                   className="absolute top-10 right-10 w-16 h-16 bg-cyan-600/80 rounded-full border-2 border-white active:bg-cyan-500 active:scale-95 transition-transform text-white font-bold text-xs flex items-center justify-center shadow-xl backdrop-blur-sm pointer-events-auto"
                    onTouchStart={handleTouch(' ', true)} onTouchEnd={handleTouch(' ', false)}
                    style={{ touchAction: 'none' }}
                 >
