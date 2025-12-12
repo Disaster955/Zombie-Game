@@ -58,12 +58,15 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
   const accumulatorRef = useRef<number>(0);
   const FIXED_TIME_STEP = 1000 / 60; 
   
+  // Viewport Logic
+  const TARGET_HEIGHT = 640; // The logical height the game is designed for
+  const scaleRef = useRef<number>(1);
+  
   // Input State
   const keys = useRef<{ [key: string]: boolean }>({});
   const prevKeys = useRef<{ [key: string]: boolean }>({}); 
   const [isMobile, setIsMobile] = useState(false);
   const [isLandscape, setIsLandscape] = useState(true);
-  const [dimensions, setDimensions] = useState({ w: 0, h: 0 }); // Trigger render on resize
 
   // Joystick Refs
   const joystickBaseRef = useRef<HTMLDivElement>(null);
@@ -80,7 +83,11 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
             canvasRef.current.width = w;
             canvasRef.current.height = h;
         }
-        setDimensions({ w, h });
+        
+        // Calculate scale to fit the target height
+        // This ensures the floor (600px) is always visible even on short screens (e.g. 360px high)
+        scaleRef.current = h / TARGET_HEIGHT;
+
         setIsLandscape(w > h);
         setIsMobile(('ontouchstart' in window) || (navigator.maxTouchPoints > 0));
     };
@@ -267,9 +274,12 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
       const { player, camera } = state.current;
       const screenWidth = window.innerWidth;
       
+      // Calculate scaled screen width for spawn logic
+      const logicalWidth = screenWidth / scaleRef.current;
+      
       const spawnPoints = [
           camera.x - 50,
-          camera.x + screenWidth + 50
+          camera.x + logicalWidth + 50
       ];
 
       for (let i = 0; i < count; i++) {
@@ -877,11 +887,20 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
 
     const canvas = canvasRef.current;
     if (canvas) {
-        const targetCamX = player.x - canvas.width / 3; 
+        // Updated Camera Logic for Scaled Context
+        // We work with "logical coordinates" inside the state, but we need to center based on logical viewport
+        const currentScale = scaleRef.current;
+        const logicalWidth = canvas.width / currentScale;
+        const logicalHeight = canvas.height / currentScale; // Should be approx TARGET_HEIGHT
+
+        const targetCamX = player.x - logicalWidth / 3; 
         state.current.camera.x += (targetCamX - state.current.camera.x) * 0.1;
+        
         if (state.current.camera.x < 0) state.current.camera.x = 0;
-        if (state.current.camera.x > WORLD_WIDTH - canvas.width) state.current.camera.x = WORLD_WIDTH - canvas.width;
-        state.current.camera.y = 0;
+        if (state.current.camera.x > WORLD_WIDTH - logicalWidth) state.current.camera.x = WORLD_WIDTH - logicalWidth;
+        
+        // Vertical Camera Lock (Keep floor at bottom)
+        state.current.camera.y = 0; // We keep it at 0 because scaling handles the fit
     }
 
   }, [onScoreUpdate, onStatusChange]);
@@ -1037,11 +1056,18 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
     if (!ctx) return;
 
     const { player, platforms, zombies, particles, projectiles, collectibles, camera, hordeWarningTimer } = state.current;
+    const currentScale = scaleRef.current;
 
     ctx.fillStyle = '#111827';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.save();
+    
+    // --- APPLY DYNAMIC SCALING ---
+    // This zooms the game out if the screen is too short (mobile landscape)
+    // so we can see the full vertical height of the level.
+    ctx.scale(currentScale, currentScale);
+    
     ctx.translate(-Math.floor(camera.x), -Math.floor(camera.y));
 
     ctx.fillStyle = '#1f2937';
@@ -1151,6 +1177,8 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
     if (hordeWarningTimer > 0) {
         ctx.save();
         ctx.fillStyle = 'rgba(220, 38, 38, 0.2)'; 
+        // We use logical dimensions here if we are inside scaled context, or full canvas if not
+        // But since restore() was called, we are back to screen pixels.
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
         if (Math.floor(Date.now() / 200) % 2 === 0) {
@@ -1442,25 +1470,25 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
             {/* Top Right Utils */}
             <div className="absolute top-4 right-4 flex gap-3 pointer-events-auto">
                 <button 
-                  className="w-12 h-12 bg-gray-700/60 active:bg-gray-600 backdrop-blur-sm rounded-full border border-gray-400 flex items-center justify-center text-white text-xs font-bold shadow-lg"
+                  className="w-12 h-12 bg-gray-700/80 active:bg-gray-600 backdrop-blur-md rounded-full border-2 border-gray-400 flex items-center justify-center text-white text-xs font-bold shadow-lg"
                   onTouchStart={handleTouch('r', true)} onTouchEnd={handleTouch('r', false)}
                 >
                     R
                 </button>
                 <button 
-                  className="w-12 h-12 bg-gray-700/60 active:bg-gray-600 backdrop-blur-sm rounded-full border border-gray-400 flex items-center justify-center text-white text-xs font-bold shadow-lg"
+                  className="w-12 h-12 bg-gray-700/80 active:bg-gray-600 backdrop-blur-md rounded-full border-2 border-gray-400 flex items-center justify-center text-white text-xs font-bold shadow-lg"
                   onTouchStart={handleTouch('c', true)} onTouchEnd={handleTouch('c', false)}
                 >
                     SWAP
                 </button>
                 <button 
-                  className="w-12 h-12 bg-red-900/60 active:bg-red-800 backdrop-blur-sm rounded-full border border-red-400 flex items-center justify-center text-white text-xl font-bold shadow-lg"
+                  className="w-12 h-12 bg-red-900/80 active:bg-red-800 backdrop-blur-md rounded-full border-2 border-red-400 flex items-center justify-center text-white text-xl font-bold shadow-lg"
                   onTouchStart={handleTouch('v', true)} onTouchEnd={handleTouch('v', false)}
                 >
                     +
                 </button>
                 <button 
-                   className="w-12 h-12 bg-yellow-600/60 active:bg-yellow-500 backdrop-blur-sm rounded-full border border-yellow-400 flex items-center justify-center text-white font-bold shadow-lg"
+                   className="w-12 h-12 bg-yellow-600/80 active:bg-yellow-500 backdrop-blur-md rounded-full border-2 border-yellow-400 flex items-center justify-center text-white font-bold shadow-lg"
                    onTouchStart={handlePause}
                 >
                     ||
@@ -1470,7 +1498,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
             {/* Bottom Left: Enhanced Analog Joystick */}
             <div 
                 ref={joystickBaseRef}
-                className="absolute bottom-8 left-8 w-48 h-48 bg-gray-800/30 rounded-full border-4 border-gray-500/50 flex items-center justify-center backdrop-blur-md pointer-events-auto shadow-2xl"
+                className="absolute bottom-8 left-8 w-48 h-48 bg-gray-800/60 rounded-full border-4 border-gray-400 flex items-center justify-center backdrop-blur-md pointer-events-auto shadow-2xl"
                 onTouchStart={handleJoystickTouch}
                 onTouchMove={handleJoystickTouch}
                 onTouchEnd={handleJoystickEnd}
@@ -1481,7 +1509,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
                 
                 <div 
                     ref={joystickKnobRef}
-                    className="w-20 h-20 bg-white/90 rounded-full shadow-xl pointer-events-none border-4 border-gray-300"
+                    className="w-20 h-20 bg-white rounded-full shadow-xl pointer-events-none border-4 border-gray-300"
                     style={{ transform: 'translate(0px, 0px)', transition: 'transform 0.05s linear' }}
                 ></div>
             </div>
@@ -1490,7 +1518,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
             <div className="absolute bottom-8 right-8 w-64 h-64 pointer-events-none">
                  {/* Shoot (Left) */}
                  <button 
-                   className="absolute bottom-6 left-2 w-20 h-20 bg-red-600/70 rounded-full border-4 border-white/50 active:bg-red-500 active:scale-95 transition-transform text-white font-bold text-xs flex items-center justify-center shadow-xl backdrop-blur-sm pointer-events-auto"
+                   className="absolute bottom-6 left-2 w-20 h-20 bg-red-600/80 rounded-full border-4 border-white active:bg-red-500 active:scale-95 transition-transform text-white font-bold text-xs flex items-center justify-center shadow-xl backdrop-blur-sm pointer-events-auto"
                    onTouchStart={handleTouch('x', true)} onTouchEnd={handleTouch('x', false)}
                 >
                     FIRE
@@ -1498,7 +1526,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
                 
                 {/* Jump (Main - Bottom Right) */}
                 <button 
-                   className="absolute bottom-0 right-0 w-24 h-24 bg-blue-600/70 rounded-full border-4 border-white/50 active:bg-blue-500 active:scale-95 transition-transform text-white font-bold text-sm flex items-center justify-center shadow-xl backdrop-blur-sm pointer-events-auto"
+                   className="absolute bottom-0 right-0 w-24 h-24 bg-blue-600/80 rounded-full border-4 border-white active:bg-blue-500 active:scale-95 transition-transform text-white font-bold text-sm flex items-center justify-center shadow-xl backdrop-blur-sm pointer-events-auto"
                    onTouchStart={handleTouch('z', true)} onTouchEnd={handleTouch('z', false)}
                 >
                     JUMP
@@ -1506,7 +1534,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScoreUpdate, onStatusChange, 
 
                 {/* Dash (Top) */}
                 <button 
-                   className="absolute top-6 right-10 w-16 h-16 bg-cyan-600/70 rounded-full border-4 border-white/50 active:bg-cyan-500 active:scale-95 transition-transform text-white font-bold text-xs flex items-center justify-center shadow-xl backdrop-blur-sm pointer-events-auto"
+                   className="absolute top-6 right-10 w-16 h-16 bg-cyan-600/80 rounded-full border-4 border-white active:bg-cyan-500 active:scale-95 transition-transform text-white font-bold text-xs flex items-center justify-center shadow-xl backdrop-blur-sm pointer-events-auto"
                    onTouchStart={handleTouch(' ', true)} onTouchEnd={handleTouch(' ', false)}
                 >
                     DASH
